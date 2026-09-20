@@ -1,0 +1,61 @@
+@using HRMSystem.Models
+@model IEnumerable<HRMSystem.Models.PayrollRecord>
+@{
+    ViewData["Title"] = "My Payslips";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold m-0"><i class="bi bi-receipt text-primary me-2"></i>My Payslips</h2>
+</div>
+
+<div class="card shadow border-0 rounded-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Month/Year</th>
+                        <th>Basic Salary</th>
+                        <th>Total Deductions</th>
+                        <th>Net Salary</th>
+                        <th>Status</th>
+                        <th class="pe-4 text-end">View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold">
+                                <i class="bi bi-calendar3 text-secondary me-2"></i> 
+                                @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(item.Month) @item.Year
+                            </td>
+                            <td class="text-muted">@item.BasicSalary.ToString("C")</td>
+                            <td class="text-danger">@item.Deductions.ToString("C")</td>
+                            <td class="text-success fw-bold">@item.NetSalary.ToString("C")</td>
+                            <td>
+                                @if(item.Status == PayrollStatus.Processed) { <span class="badge bg-warning text-dark px-3 rounded-pill shadow-sm">Processing</span> }
+                                else if(item.Status == PayrollStatus.Paid) { <span class="badge bg-success px-3 rounded-pill shadow-sm"><i class="bi bi-check-circle me-1"></i>Paid</span> }
+                                else { <span class="badge bg-secondary px-3 rounded-pill">Draft</span> }
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a asp-action="PaySlip" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    <i class="bi bi-download me-1"></i> Slip
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                    @if(!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-cash-stack display-4 d-block mb-3 opacity-25"></i>
+                                No payslips are available for your account yet.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

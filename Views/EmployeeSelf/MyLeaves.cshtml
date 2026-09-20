@@ -1,0 +1,76 @@
+@model IEnumerable<HRMSystem.Models.LeaveRequest>
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "My Leaves";
+}
+
+<div class="main-content-header d-flex justify-content-between align-items-center">
+    <div><i class="bi bi-calendar-check me-2"></i> My Leave History</div>
+    <a asp-action="ApplyLeave" class="btn btn-sm btn-light rounded-0 fw-bold text-uppercase" style="font-size: 0.75rem;">
+        <i class="bi bi-plus-lg me-1"></i> Apply New Leave
+    </a>
+</div>
+<div class="main-content-body shadow-sm p-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size: 0.85rem;">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-3 py-3 text-uppercase text-muted small">Applied At</th>
+                    <th class="py-3 text-uppercase text-muted small">Type</th>
+                    <th class="py-3 text-uppercase text-muted small">Dates</th>
+                    <th class="py-3 text-uppercase text-muted small">Days</th>
+                    <th class="py-3 text-uppercase text-muted small">Reason</th>
+                    <th class="py-3 text-uppercase text-muted small text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var leave in Model)
+                    {
+                        string statusClass = leave.Status switch
+                        {
+                            LeaveStatus.Approved => "success",
+                            LeaveStatus.Rejected => "danger",
+                            LeaveStatus.Pending => "warning",
+                            _ => "secondary"
+                        };
+
+                        <tr>
+                            <td class="ps-3 py-3 text-muted">@leave.AppliedAt.ToString("dd MMM yyyy")</td>
+                            <td class="py-3 fw-bold">
+                                @leave.LeaveType?.Name
+                            </td>
+                            <td class="py-3">@leave.DisplayDates</td>
+                            <td class="py-3">@leave.TotalDays.ToString("0.##")</td>
+                            <td class="py-3 text-truncate" style="max-width: 200px;" title="@leave.Reason">@leave.Reason</td>
+                            <td class="py-3 text-center">
+                                <span class="badge rounded-0 px-3 py-2 text-uppercase bg-@statusClass">
+                                    @leave.Status
+                                </span>
+                                @if (leave.Status == LeaveStatus.Rejected && !string.IsNullOrEmpty(leave.RejectionRemark))
+                                {
+                                    <i class="bi bi-info-circle ms-1 text-danger" title="@leave.RejectionRemark" style="cursor:pointer;"
+                                       data-bs-toggle="tooltip" data-bs-placement="top"></i>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">No leave requests found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+@section Scripts {
+    <script>
+        // Enable Bootstrap tooltips
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    </script>
+}
+</div>

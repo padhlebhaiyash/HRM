@@ -1,0 +1,170 @@
+@model HRMSystem.Models.LeaveRequest
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Apply Leave";
+    var leaveBalances = ViewBag.LeaveBalances as List<HRMSystem.Models.LeaveBalance>;
+}
+
+<div class="main-content-header">
+    <i class="bi bi-pencil-square me-2"></i> Apply for Leave
+</div>
+<div class="main-content-body shadow-sm">
+    <div class="row g-4">
+        <!-- Form Column -->
+        <div class="col-lg-8">
+            <form asp-action="ApplyLeave" method="post" id="leaveForm">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="LeaveTypeId" class="form-label fw-bold small text-muted text-uppercase">Leave Type</label>
+                        <select asp-for="LeaveTypeId" class="form-select rounded-0" id="leaveTypeSelect" asp-items="@((SelectList)ViewData["LeaveTypeId"])">
+                            <option value="">-- Select Type --</option>
+                        </select>
+                        <span asp-validation-for="LeaveTypeId" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Half Day Period Selector (Hidden by default) -->
+                    <div class="col-md-6" id="halfDaySection" style="display:none;">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Specify Half</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" asp-for="HalfDayPeriod" value="FirstHalf" id="firstHalf">
+                                <label class="form-check-label" for="firstHalf">First Half</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" asp-for="HalfDayPeriod" value="SecondHalf" id="secondHalf">
+                                <label class="form-check-label" for="secondHalf">Second Half</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Duration Selector -->
+                    <div class="col-12" id="durationSection">
+                        <label class="form-label fw-bold small text-muted text-uppercase">Leave Duration</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="duration" value="single" id="durationSingle" checked>
+                                <label class="form-check-label" for="durationSingle">Single Day</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="duration" value="multiple" id="durationMultiple">
+                                <label class="form-check-label" for="durationMultiple">Multiple Days</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="duration" value="half" id="durationHalf">
+                                <label class="form-check-label" for="durationHalf">Half Day</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6" id="startDateCol">
+                        <label asp-for="StartDate" class="form-label fw-bold small text-muted text-uppercase" id="startDateLabel">Date</label>
+                        <input asp-for="StartDate" class="form-control rounded-0" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" id="startDate" />
+                        <span asp-validation-for="StartDate" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6" id="endDateCol" style="display:none;">
+                        <label asp-for="EndDate" class="form-label fw-bold small text-muted text-uppercase">End Date</label>
+                        <input asp-for="EndDate" class="form-control rounded-0" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" id="endDate" />
+                        <span asp-validation-for="EndDate" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="Reason" class="form-label fw-bold small text-muted text-uppercase">Reason for Leave</label>
+                        <textarea asp-for="Reason" class="form-control rounded-0" rows="3" placeholder="Please provide a brief reason..."></textarea>
+                        <span asp-validation-for="Reason" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-dark rounded-0 px-5 fw-bold text-uppercase" style="background-color: #4a5a6a;">
+                            Submit Request
+                        </button>
+                        <a asp-action="MyLeaves" class="btn btn-outline-secondary rounded-0 px-4 text-uppercase fw-bold ms-2">Cancel</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar Column (Balances) -->
+        <div class="col-lg-4">
+            <div class="card bg-light border-0 rounded-0 h-100">
+                <div class="card-header bg-secondary text-white rounded-0 py-2 small fw-bold text-uppercase">
+                    Available Balances
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0 small">
+                        <tbody>
+                            @if (leaveBalances != null)
+                            {
+                                foreach (var b in leaveBalances)
+                                {
+                                    <tr>
+                                        <td class="ps-3 py-2 text-muted fw-bold">@b.LeaveType?.Name</td>
+                                        <td class="pe-3 py-2 text-end fw-bold">@b.Balance</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                    <div class="p-3">
+                        <div class="alert alert-info py-2 px-3 rounded-0 m-0 small">
+                            <i class="bi bi-info-circle me-1"></i> Your request will be sent to HR for approval.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Function to handle UI toggles
+            function updateUI() {
+                var duration = $("input[name='duration']:checked").val();
+                
+                if (duration === "half") {
+                    $("#halfDaySection").fadeIn();
+                    $("#startDateLabel").text("Date");
+                    $("#endDateCol").hide();
+                    $("#endDate").val($("#startDate").val()); // Sync logic
+                } else if (duration === "single") {
+                    $("#halfDaySection").hide();
+                    $("#startDateLabel").text("Date");
+                    $("#endDateCol").hide();
+                    $("#endDate").val($("#startDate").val()); // Sync logic
+                } else {
+                    $("#halfDaySection").hide();
+                    $("#startDateLabel").text("Start Date");
+                    $("#endDateCol").fadeIn();
+                }
+            }
+
+            $("input[name='duration']").change(updateUI);
+            
+            $("#startDate").change(function() {
+                var duration = $("input[name='duration']:checked").val();
+                if (duration === "half" || duration === "single") {
+                    $("#endDate").val($(this).val());
+                }
+            });
+
+            // Prevent form submission errors on Half/Single day if logic fails
+            $("#leaveForm").submit(function() {
+                var duration = $("input[name='duration']:checked").val();
+                if (duration === "half" || duration === "single") {
+                    $("#endDate").val($("#startDate").val());
+                }
+                
+                // If it's not a half-day, clear the radio selection
+                if (duration !== "half") {
+                    $("input[name='HalfDayPeriod']").prop('checked', false);
+                }
+            });
+
+            updateUI(); // Run on load
+        });
+    </script>
+}

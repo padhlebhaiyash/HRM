@@ -1,0 +1,116 @@
+@model IEnumerable<HRMSystem.Models.Employee>
+@{
+
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Employees";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-people-fill display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">Employee Management</h3>
+            <div class="profile-role">
+                Admin Control
+            </div>
+            <div class="status-box">
+                Active Directory
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Create" class="btn btn-sm btn-primary rounded-pill fw-bold">
+                <i class="bi bi-person-plus me-1"></i> Register Employee
+            </a>
+
+            <a asp-action="ExportToCsv" class="btn btn-sm btn-outline-success rounded-pill fw-bold">
+                <i class="bi bi-download me-1"></i> Export to CSV
+            </a>
+            
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" data-bs-toggle="collapse" data-bs-target="#importCsvArea">
+                <i class="bi bi-upload me-1"></i> Import from CSV
+            </button>
+            
+            <div class="collapse mt-1" id="importCsvArea">
+                <form asp-action="ImportFromCsv" method="post" enctype="multipart/form-data" class="card card-body p-2 border-primary">
+                    <input type="file" name="csvFile" class="form-control form-control-sm mb-2" accept=".csv" required />
+                    <button type="submit" class="btn btn-sm btn-success w-100 rounded-pill fw-bold">Upload & Import</button>
+                </form>
+            </div>
+
+            <a asp-controller="Admin" asp-action="Dashboard" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-people"></i> Registered Employees</span>
+        </div>
+        <div class="main-content-body shadow-sm p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Code</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th class="text-end pe-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold font-monospace">@item.EmployeeCode</td>
+                                <td class="fw-bold">@item.FullName</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border rounded-pill px-3">
+                                        @item.Department?.Name
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3"><i class="bi bi-check-circle me-1"></i>Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                                    }
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <div class="btn-group">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info rounded-start-pill" title="Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-controller="LeaveBalance" asp-action="Index" class="btn btn-sm btn-outline-primary" title="Leave Balances">
+                                            <i class="bi bi-wallet2"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary rounded-end-pill" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @if(!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No employees found.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

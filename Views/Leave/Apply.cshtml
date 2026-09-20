@@ -1,0 +1,50 @@
+@model HRMSystem.Models.LeaveRequest
+@{
+    ViewData["Title"] = "Apply for Leave";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold m-0">Apply for Leave</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+        <i class="bi bi-arrow-left me-1"></i> Cancel
+    </a>
+</div>
+
+<div class="card shadow border-0 rounded-4 w-50">
+    <div class="card-body p-4 p-md-5">
+        <form asp-action="Apply">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            
+            <div class="mb-4">
+                <label asp-for="LeaveTypeId" class="form-label fw-bold">Leave Type</label>
+                <select asp-for="LeaveTypeId" asp-items="ViewBag.LeaveTypeId as SelectList" class="form-select border-primary" required>
+                    <option value="">-- Select Leave Type --</option>
+                </select>
+                <span asp-validation-for="LeaveTypeId" class="text-danger small"></span>
+            </div>
+            
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <label asp-for="StartDate" class="form-label fw-bold"></label>
+                    <input asp-for="StartDate" type="date" class="form-control" required />
+                    <span asp-validation-for="StartDate" class="text-danger small"></span>
+                </div>
+                <div class="col-6">
+                    <label asp-for="EndDate" class="form-label fw-bold"></label>
+                    <input asp-for="EndDate" type="date" class="form-control" required />
+                    <span asp-validation-for="EndDate" class="text-danger small"></span>
+                </div>
+            </div>
+            
+            <div class="mb-5">
+                <label asp-for="Reason" class="form-label fw-bold"></label>
+                <textarea asp-for="Reason" class="form-control" rows="4" required placeholder="Please provide specific reasoning for the leave..."></textarea>
+                <span asp-validation-for="Reason" class="text-danger small"></span>
+            </div>
+            
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>

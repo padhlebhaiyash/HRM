@@ -1,0 +1,81 @@
+@model HRMSystem.Models.Department
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Edit Department";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-pencil-square display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">@Model.Name</h3>
+            <div class="profile-role">
+                Admin Control
+            </div>
+            <div class="status-box">
+                Updating Records
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-pencil"></i> Edit Department Details
+        </div>
+        <div class="main-content-body shadow-sm">
+            <form asp-action="Edit">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-4"></div>
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="CreatedAt" />
+                
+                <div class="row g-4">
+                    <div class="col-md-12">
+                        <label asp-for="Name" class="form-label fw-bold small text-uppercase text-muted">Department Name</label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <label asp-for="Description" class="form-label fw-bold small text-uppercase text-muted">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <div class="form-check form-switch p-0">
+                            <label class="form-check-label fw-bold small text-uppercase text-muted" asp-for="IsActive">Status</label>
+                            <div class="mt-2">
+                                <input class="form-check-input ms-0 float-none" asp-for="IsActive" />
+                                <span class="ms-2 fw-bold @(Model.IsActive ? "text-success" : "text-danger")">
+                                    @(Model.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mt-3 p-3 bg-light rounded-3 small text-muted">
+                        <i class="bi bi-clock-history me-2"></i> Created on @Model.CreatedAt.ToString("f")
+                    </div>
+                    
+                    <div class="col-12 mt-5 border-top pt-4">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold">
+                            <i class="bi bi-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

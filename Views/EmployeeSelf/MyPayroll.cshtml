@@ -1,0 +1,55 @@
+@model IEnumerable<HRMSystem.Models.PayrollRecord>
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "My Payroll";
+}
+
+<div class="main-content-header">
+    <i class="bi bi-cash-stack me-2"></i> My Payroll History
+</div>
+<div class="main-content-body shadow-sm p-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size: 0.85rem;">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-3 py-3 text-uppercase text-muted small">Period</th>
+                    <th class="py-3 text-uppercase text-muted small text-end">Basic Salary</th>
+                    <th class="py-3 text-uppercase text-muted small text-end">Net Pay</th>
+                    <th class="py-3 text-uppercase text-muted small text-center">Status</th>
+                    <th class="pe-3 py-3 text-uppercase text-muted small text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var record in Model)
+                    {
+                        <tr>
+                            <td class="ps-3 py-3 fw-bold text-muted">
+                                @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(record.Month) @record.Year
+                            </td>
+                            <td class="py-3 text-end">@record.BasicSalary.ToString("C")</td>
+                            <td class="py-3 text-end fw-bold text-success">@record.NetSalary.ToString("C")</td>
+                            <td class="py-3 text-center">
+                                <span class="badge rounded-0 px-3 py-2 text-uppercase bg-@(record.Status == PayrollStatus.Paid ? "success" : "info")">
+                                    @record.Status
+                                </span>
+                            </td>
+                            <td class="pe-3 py-3 text-end">
+                                <a asp-action="ViewPaySlip" asp-route-id="@record.Id" class="btn btn-sm btn-outline-dark rounded-0 px-3 py-1 fw-bold text-uppercase" style="font-size: 0.7rem;">
+                                    View Slip
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted small">No payroll records found yet.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

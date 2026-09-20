@@ -1,0 +1,85 @@
+@inject HRMSystem.Data.ApplicationDbContext DbContext
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Login";
+}
+
+
+<div class="card login-card">
+    <div class="text-center mb-3">
+        @{
+            var companySetting = DbContext.CompanySettings.FirstOrDefault();
+            var companyName = companySetting?.CompanyName;
+            var logoPath = companySetting?.LogoImagePath;
+        }
+        @if (!string.IsNullOrEmpty(logoPath))
+        {
+            <img src="@logoPath" alt="@companyName" style="max-height: 60px; max-width: 100%; object-fit: contain;" />
+        }
+        else if (!string.IsNullOrEmpty(companyName))
+        {
+            <h1 class="logo-text">@companyName</h1>
+        }
+    </div>
+
+    <!-- Visual tabs for role separation -->
+    <div class="custom-tabs">
+        <div class="custom-tab active" data-role="Employee" onclick="setRoleMode('Employee', this)">
+            <i class="bi bi-person-fill"></i> Employee
+        </div>
+        <div class="custom-tab" data-role="Manager" onclick="setRoleMode('Manager', this)">
+            <i class="bi bi-lock-fill"></i> Manager
+        </div>
+    </div>
+
+    <form asp-action="Login" method="post" class="form-section pb-2 border-bottom">
+        <input type="hidden" id="roleMode" name="roleMode" value="Employee" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="input-group-custom">
+            <div class="input-group-text-custom">
+                <i class="bi bi-envelope-fill"></i>
+            </div>
+            <input type="text" class="form-control-custom" id="username" name="username" placeholder="Username or Email" required autocomplete="off">
+        </div>
+
+        <div class="input-group-custom">
+            <div class="input-group-text-custom">
+                <i class="bi bi-lock-fill"></i>
+            </div>
+            <input type="password" class="form-control-custom" id="password" name="password" placeholder="Password" required>
+        </div>
+
+        <div class="checkbox-container">
+            <input type="checkbox" id="rememberMe" name="rememberMe" value="true">
+            <label for="rememberMe" class="mb-0">Always stay signed in</label>
+        </div>
+
+        <button type="submit" class="btn btn-login">Login</button>
+    </form>
+
+    <div class="forgot-section">
+        <div class="forgot-title">Forgot your password?</div>
+        <div class="forgot-subtitle">
+            no worries, click <a asp-action="ForgotPassword" class="forgot-link">here</a> to reset your password.
+        </div>
+        
+        <div class="mt-3 text-center small text-muted">
+            <i class="bi bi-info-circle"></i> Administrators should use the Manager tab.
+        </div>
+    </div>
+</div>
+
+<script>
+    function setRoleMode(role, element) {
+        // Update hidden input
+        document.getElementById('roleMode').value = role;
+        
+        // Update UI tabs
+        var tabs = document.getElementsByClassName('custom-tab');
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove('active');
+        }
+        element.classList.add('active');
+    }
+</script>

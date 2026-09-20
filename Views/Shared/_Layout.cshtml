@@ -1,0 +1,143 @@
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject HRMSystem.Data.ApplicationDbContext DbContext
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - HRM System</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="d-flex" id="wrapper">
+        <!-- Sidebar -->
+        <div class="border-end bg-white" id="sidebar-wrapper" style="width: 250px; min-height: 100vh;">
+            <div class="sidebar-heading border-bottom bg-primary text-white p-3 fw-bold fs-5 text-center">
+                @{
+                    var companySetting = DbContext.CompanySettings.FirstOrDefault();
+                    var companyName = companySetting?.CompanyName;
+                    var logoPath = companySetting?.LogoImagePath;
+                }
+                @if (!string.IsNullOrEmpty(logoPath))
+                {
+                    <img src="@logoPath" alt="@companyName" style="max-height: 35px; width: auto; object-fit: contain; vertical-align: middle;" />
+                }
+                else if (!string.IsNullOrEmpty(companyName))
+                {
+                    <i class="bi bi-building me-1"></i> @companyName
+                }
+                else
+                {
+                    <i class="bi bi-building me-1"></i>
+                }
+            </div>
+            <div class="list-group list-group-flush pt-2">
+                @{
+                    var userRoles = HttpContextAccessor.HttpContext?.Session.GetString("UserRoles") ?? "";
+                    var loginPortal = HttpContextAccessor.HttpContext?.Session.GetString("LoginPortal") ?? "Employee";
+                    var isAdmin = userRoles.Contains("Admin");
+                    var isManagerPortal = loginPortal == "Manager" && !isAdmin;
+
+                    if (isAdmin)
+                    {
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Admin" asp-action="Dashboard"><i class="bi bi-speedometer2"></i> Dashboard (Admin)</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Department" asp-action="Index"><i class="bi bi-diagram-3"></i> Departments</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Employee" asp-action="Index"><i class="bi bi-people"></i> Employees</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Leave" asp-action="Index"><i class="bi bi-envelope-paper"></i> Leave Requests</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="LeaveBalance" asp-action="Index"><i class="bi bi-wallet2"></i> Leave Balances</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Payroll" asp-action="Index"><i class="bi bi-cash-coin"></i> Payroll</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3 text-primary fw-bold" asp-controller="Admin" asp-action="CustomizePortal"><i class="bi bi-sliders"></i> Customize Portal</a>
+                        
+                        <div class="list-group-item list-group-item-light p-2 ps-3 text-muted small text-uppercase fw-bold mt-2" style="font-size:0.7rem; letter-spacing:0.08em;">My Self-Service</div>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="EmployeeSelf" asp-action="Dashboard"><i class="bi bi-person-circle"></i> My Dashboard</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="EmployeeSelf" asp-action="Profile"><i class="bi bi-person"></i> My Profile</a>
+                    }
+                    else if (isManagerPortal)
+                    {
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Manager" asp-action="Dashboard"><i class="bi bi-speedometer2"></i> Team Overview</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Manager" asp-action="TeamLeaves"><i class="bi bi-calendar-check"></i> Team Leaves</a>
+                        <div class="list-group-item list-group-item-light p-2 ps-3 text-muted small text-uppercase fw-bold mt-2" style="font-size:0.7rem; letter-spacing:0.08em;">My Self-Service</div>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="EmployeeSelf" asp-action="Dashboard"><i class="bi bi-person-circle"></i> My Dashboard</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Leave" asp-action="Index"><i class="bi bi-envelope"></i> My Leaves</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Payroll" asp-action="Index"><i class="bi bi-receipt"></i> My Payslips</a>
+                    }
+                    else if (!string.IsNullOrEmpty(userRoles))
+                    {
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="EmployeeSelf" asp-action="Dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="EmployeeSelf" asp-action="Profile"><i class="bi bi-person"></i> My Profile</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Leave" asp-action="Index"><i class="bi bi-envelope"></i> My Leaves</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Payroll" asp-action="Index"><i class="bi bi-receipt"></i> Payslips</a>
+                    }
+                }
+            </div>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper" class="flex-grow-1 bg-light">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
+                <div class="container-fluid">
+                    <button class="btn btn-outline-secondary" id="sidebarToggle"><i class="bi bi-list"></i></button>
+                    
+                    <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle fw-bold" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="bi bi-person-circle text-primary fs-5"></i> @HttpContextAccessor.HttpContext?.Session.GetString("UserFullName")
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="navbarDropdown">
+                                @if(!isAdmin)
+                                {
+                                    <a class="dropdown-item" asp-controller="EmployeeSelf" asp-action="Profile">My Profile</a>
+                                    <div class="dropdown-divider"></div>
+                                }
+                                <a class="dropdown-item text-danger" asp-controller="Auth" asp-action="Logout">Logout</a>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div class="container-fluid p-4">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                        <!-- Use Html.Raw safely since we generate TempData ourselves -->
+                        @Html.Raw(TempData["SuccessMessage"])
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                        @Html.Raw(TempData["ErrorMessage"])
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        document.getElementById('sidebarToggle').addEventListener('click', event => {
+            event.preventDefault();
+            document.body.classList.toggle('sb-sidenav-toggled');
+            const wrapper = document.getElementById('wrapper');
+            const sidebar = document.getElementById('sidebar-wrapper');
+            if (sidebar.style.display === 'none') {
+                sidebar.style.display = 'block';
+            } else {
+                sidebar.style.display = 'none';
+            }
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

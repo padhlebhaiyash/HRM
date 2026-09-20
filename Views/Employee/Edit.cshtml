@@ -1,0 +1,237 @@
+@using HRMSystem.Models
+@model HRMSystem.Models.Employee
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Edit Employee";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                {
+                    <img src="@Model.PhotoPath" class="rounded-circle border" style="width: 120px; height: 120px; object-fit: cover;" alt="Profile" />
+                }
+                else
+                {
+                    <i class="bi bi-person-circle display-1 text-primary opacity-25"></i>
+                }
+            </div>
+            <h3 class="profile-name">@Model.FullName</h3>
+            <div class="profile-role">
+                @Model.Designation?.Name
+            </div>
+            <div class="status-box">
+                @Model.EmployeeCode
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+
+        <!-- Designation Hierarchy Reference -->
+        @if (ViewBag.AllDesignations != null)
+        {
+            <div class="card mt-4 shadow-sm border-0 rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white fw-bold py-2 small d-flex align-items-center">
+                    <i class="bi bi-diagram-3-fill me-2"></i> Rank Hierarchy
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush small" style="font-size: 0.8rem;">
+                        @foreach (var d in ((IEnumerable<HRMSystem.Models.Designation>)ViewBag.AllDesignations).OrderBy(d => d.Level))
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                <span>
+                                    @for (int i = 1; i < d.Level; i++)
+                                    {
+                                        <span class="text-muted opacity-50">&bull;&nbsp;</span>
+                                    }
+                                    <span class="fw-bold text-dark">@d.Name</span>
+                                </span>
+                                <span class="badge bg-primary rounded-pill">L@(d.Level)</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-pencil"></i> Update Employee Profile
+        </div>
+        <div class="main-content-body shadow-sm">
+            <form asp-action="Edit">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-4"></div>
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="CreatedAt" />
+                <input type="hidden" asp-for="EmployeeCode" />
+
+                <div class="row g-4">
+                    <div class="col-md-12">
+                        <h6 class="fw-bold text-uppercase text-muted border-bottom pb-2 mb-3">Personal & Contact</h6>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="FirstName" class="form-label fw-bold small">First Name</label>
+                        <input asp-for="FirstName" class="form-control" />
+                        <span asp-validation-for="FirstName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="LastName" class="form-label fw-bold small">Last Name</label>
+                        <input asp-for="LastName" class="form-control" />
+                        <span asp-validation-for="LastName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-12">
+                        <label asp-for="Email" class="form-label fw-bold small">Email Address</label>
+                        <input asp-for="Email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-12 mt-4">
+                        <h6 class="fw-bold text-uppercase text-muted border-bottom pb-2 mb-3">Professional Info</h6>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="DepartmentId" class="form-label fw-bold small">Department</label>
+                        <select asp-for="DepartmentId" class="form-select" asp-items="ViewBag.DepartmentId"></select>
+                        <span asp-validation-for="DepartmentId" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ManagerId" class="form-label fw-bold small">Reporting Manager</label>
+                        <select asp-for="ManagerId" class="form-select" id="managerSelect" asp-items="ViewBag.ManagerId" data-selected="@Model.ManagerId">
+                            <option value="">-- No Direct Line Manager --</option>
+                        </select>
+                        <span asp-validation-for="ManagerId" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DesignationId" class="form-label fw-bold small">Designation</label>
+                        <select asp-for="DesignationId" class="form-select" id="designationSelect" asp-items="ViewBag.DesignationId">
+                            <option value="">-- Choose Designation --</option>
+                        </select>
+                        <span asp-validation-for="DesignationId" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Salary" class="form-label fw-bold small">Salary</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="Salary" class="form-control" type="number" step="100" />
+                        </div>
+                        <span asp-validation-for="Salary" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="DateOfJoining" class="form-label fw-bold small">Date of Joining</label>
+                        <input asp-for="DateOfJoining" class="form-control" type="date" required />
+                        <span asp-validation-for="DateOfJoining" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-12 mt-4">
+                        <h6 class="fw-bold text-uppercase text-muted border-bottom pb-2 mb-3">Bank Details</h6>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="BankDetail.AccountHolderName" class="form-label fw-bold small">Account Holder Name</label>
+                        <input asp-for="BankDetail.AccountHolderName" class="form-control" />
+                        <span asp-validation-for="BankDetail.AccountHolderName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="BankDetail.AccountNumber" class="form-label fw-bold small">Account Number</label>
+                        <input asp-for="BankDetail.AccountNumber" class="form-control" />
+                        <span asp-validation-for="BankDetail.AccountNumber" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="BankDetail.BankName" class="form-label fw-bold small">Bank Name</label>
+                        <input asp-for="BankDetail.BankName" class="form-control" />
+                        <span asp-validation-for="BankDetail.BankName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="BankDetail.BSB" class="form-label fw-bold small">BSB</label>
+                        <input asp-for="BankDetail.BSB" class="form-control" />
+                        <span asp-validation-for="BankDetail.BSB" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="BankDetail.TaxPayerId" class="form-label fw-bold small">Tax Payer Id</label>
+                        <input asp-for="BankDetail.TaxPayerId" class="form-control" />
+                        <span asp-validation-for="BankDetail.TaxPayerId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-check form-switch p-0">
+                            <label class="form-check-label fw-bold small text-uppercase text-muted" asp-for="IsActive">Status</label>
+                            <div class="mt-2">
+                                <input class="form-check-input ms-0 float-none" asp-for="IsActive" />
+                                <span class="ms-2 fw-bold @(Model.IsActive ? "text-success" : "text-danger")">
+                                    @(Model.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-5 border-top pt-4">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold">
+                            <i class="bi bi-save me-1"></i> Save Profile Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#designationSelect').change(function () {
+                var designationId = $(this).val();
+                var currentEmpId = $('#Id').val();
+                var managerSelect = $('#managerSelect');
+                
+                // Save the currently selected value if any
+                var selectedValue = managerSelect.val() || managerSelect.data('selected');
+                
+                managerSelect.empty();
+                managerSelect.append('<option value="">-- Loading Managers --</option>');
+                
+                if (designationId) {
+                    var url = '/Employee/GetEligibleManagers?designationId=' + designationId;
+                    if (currentEmpId) {
+                        url += '&currentEmployeeId=' + currentEmpId;
+                    }
+                    $.getJSON(url, function (data) {
+                        managerSelect.empty();
+                        managerSelect.append('<option value="">-- No Direct Line Manager --</option>');
+                        $.each(data, function (index, item) {
+                            var option = $('<option value="' + item.id + '">' + item.fullName + ' (' + item.designationName + ')</option>');
+                            if (item.id == selectedValue) {
+                                option.attr('selected', 'selected');
+                            }
+                            managerSelect.append(option);
+                        });
+                    });
+                } else {
+                    managerSelect.empty();
+                    managerSelect.append('<option value="">-- Select Designation First --</option>');
+                }
+            });
+
+            // Trigger change on load if designation is pre-selected
+            if ($('#designationSelect').val()) {
+                $('#designationSelect').trigger('change');
+            }
+        });
+    </script>
+}
+

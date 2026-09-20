@@ -1,0 +1,161 @@
+@model IEnumerable<HRMSystem.Models.LeaveType>
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Manage Leave Types";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar: Actions -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-wallet2 display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">Leave Types</h3>
+            <div class="profile-role">
+                Configuration Control
+            </div>
+            <div class="status-box">
+                Configure Envelopes
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <button type="button" class="btn btn-sm btn-success rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#createLeaveTypeModal">
+                <i class="bi bi-plus-circle me-1"></i> Add Leave Type
+            </button>
+
+            <a asp-action="ExportToCsv" class="btn btn-sm btn-outline-success rounded-pill fw-bold">
+                <i class="bi bi-download me-1"></i> Export to CSV
+            </a>
+            
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold" data-bs-toggle="collapse" data-bs-target="#importCsvArea">
+                <i class="bi bi-upload me-1"></i> Import from CSV
+            </button>
+            
+            <div class="collapse mt-1" id="importCsvArea">
+                <form asp-action="ImportFromCsv" method="post" enctype="multipart/form-data" class="card card-body p-2 border-primary">
+                    <input type="file" name="csvFile" class="form-control form-control-sm mb-2" accept=".csv" required />
+                    <button type="submit" class="btn btn-sm btn-success w-100 rounded-pill fw-bold">Upload & Import</button>
+                </form>
+            </div>
+
+            <a asp-controller="Admin" asp-action="Dashboard" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content: Table List -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-gear-wide-connected"></i> System Leave Types</span>
+        </div>
+        <div class="main-content-body shadow-sm p-0">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4 py-3 text-uppercase text-muted small">Name</th>
+                                    <th class="py-3 text-uppercase text-muted small text-center">Code</th>
+                                    <th class="py-3 text-uppercase text-muted small text-center">Status</th>
+                                    <th class="pe-4 py-3 text-uppercase text-muted small text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var lt in Model)
+                                {
+                                    var isCore = new[] { "Casual", "Sick", "Earned", "Unpaid", "WFH" }.Contains(lt.Code);
+                                    <tr>
+                                        <td class="ps-4 py-3 fw-bold text-dark">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2 me-3">
+                                                    <i class="bi bi-calendar-check fs-5"></i>
+                                                </div>
+                                                <div>
+                                                    <div style="font-size: 0.95rem;">@lt.Name</div>
+                                                    @if (isCore)
+                                                    {
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.65rem;">System Core</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-info bg-opacity-10 text-info" style="font-size: 0.65rem;">Custom</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 text-center fw-bold text-muted">
+                                            @lt.Code
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            @if (lt.IsActive)
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1">Inactive</span>
+                                            }
+                                        </td>
+                                        <td class="pe-4 py-3 text-end">
+                                            @if (!isCore)
+                                            {
+                                                <form asp-action="ToggleActive" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@lt.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-@(lt.IsActive ? "danger" : "success") px-3 rounded-pill fw-bold">
+                                                        @(lt.IsActive ? "Deactivate" : "Activate")
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-secondary px-3 rounded-pill fw-bold" disabled>
+                                                    Locked
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Leave Type Modal -->
+<div class="modal fade" id="createLeaveTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form asp-action="Create" method="post" class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            @Html.AntiForgeryToken()
+            <div class="modal-header bg-success text-white py-3 border-0">
+                <h5 class="modal-title fs-5 fw-bold"><i class="bi bi-plus-circle me-2"></i>Add Custom Leave Type</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Leave Type Name</label>
+                    <input type="text" name="Name" class="form-control" placeholder="e.g. Maternity Leave" required maxlength="50" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Short Code</label>
+                    <input type="text" name="Code" class="form-control" placeholder="e.g. ML" required maxlength="10" />
+                    <div class="form-text small">Used for template exports and calendars. Must be unique.</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 py-3">
+                <button type="button" class="btn btn-outline-secondary px-4 rounded-pill fw-bold" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold shadow-sm">
+                    <i class="bi bi-check-circle-fill me-1"></i>Create Leave Type
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

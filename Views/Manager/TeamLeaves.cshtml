@@ -1,0 +1,77 @@
+@using HRMSystem.Models
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Team Leave History";
+    ViewData["ActivePage"] = "TeamLeaves";
+
+    var manager = ViewBag.Manager as Employee;
+    var teamLeaves = Model as IEnumerable<LeaveRequest> ?? new List<LeaveRequest>();
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <img src="@(string.IsNullOrEmpty(manager?.PhotoPath) ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(manager?.FullName ?? "Manager")}&size=250&background=random" : manager.PhotoPath)" alt="Profile Photo" class="profile-img mb-3" />
+            <h3 class="profile-name">@manager?.FullName</h3>
+            <p class="small text-muted">Team History Overview</p>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Dashboard" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+            </a>
+            <a asp-controller="EmployeeSelf" asp-action="TeamCalendar" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-calendar-event me-1"></i> View Team Calendar
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-clock-history"></i> Team Leave History (Last 30 Days)
+        </div>
+        <div class="main-content-body shadow-sm p-0">
+            @if (teamLeaves.Any())
+            {
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Employee</th>
+                            <th>Type</th>
+                            <th>Dates</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in teamLeaves)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@l.Employee?.FullName</td>
+                                <td><span class="badge bg-light text-dark border">@l.LeaveType?.Name</span></td>
+                                <td class="small">@l.DisplayDates</td>
+                                <td>@l.TotalDays</td>
+                                <td><span class="text-truncate d-inline-block" style="max-width:150px;" title="@l.Reason">@l.Reason</span></td>
+                                <td>
+                                    @if (l.Status == LeaveStatus.Pending) { <span class="badge bg-warning text-dark">Pending</span> }
+                                    else if (l.Status == LeaveStatus.Approved) { <span class="badge bg-success">Approved</span> }
+                                    else { <span class="badge bg-danger">Rejected</span> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-calendar-x fs-1 opacity-25"></i>
+                    <p class="mt-2 mb-0">No recent team leave activity found.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>

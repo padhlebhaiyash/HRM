@@ -1,0 +1,106 @@
+@{
+    ViewData["Title"] = "Welcome to HRM System";
+}
+
+<style>
+    .hero-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2069&ixlib=rb-4.0.3');
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 100px 0;
+        border-radius: 15px;
+        margin-bottom: 50px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+    .hero-subtitle {
+        font-size: 1.5rem;
+        font-weight: 300;
+        margin-bottom: 40px;
+        opacity: 0.9;
+    }
+    .feature-card {
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        padding: 30px;
+        height: 100%;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+    }
+    .feature-icon {
+        font-size: 2.5rem;
+        color: #F15A24;
+        margin-bottom: 20px;
+    }
+    .cta-button {
+        background-color: #F15A24;
+        color: white;
+        padding: 15px 40px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        border-radius: 30px;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+    }
+    .cta-button:hover {
+        background-color: #e04f1e;
+        color: white;
+    }
+</style>
+
+<div class="container">
+    <div class="hero-section">
+        <h1 class="hero-title">Empower Your Workforce</h1>
+        <p class="hero-subtitle">The all-in-one Human Resource Management System for modern businesses.</p>
+        <div class="mt-5">
+            <a asp-controller="Auth" asp-action="Login" class="cta-button">Access Portal</a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="feature-card text-center">
+                <div class="feature-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <h3>Employee Management</h3>
+                <p class="text-muted">Maintain a comprehensive database of your employees, their roles, and personal details in one secure place.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card text-center">
+                <div class="feature-icon">
+                    <i class="bi bi-calendar-check-fill"></i>
+                </div>
+                <h3>Leave & Attendance</h3>
+                <p class="text-muted">Streamline leave requests, approvals, and balance tracking with our automated workflow system.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card text-center">
+                <div class="feature-icon">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <h3>Payroll Processing</h3>
+                <p class="text-muted">Manage salaries, benefits, and deductions with ease. Generate accurate payslips for your entire team.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center py-5">
+        <h2 class="mb-4">Ready to transform your HR operations?</h2>
+        <p class="lead text-muted mb-5">Join hundreds of companies that use our HRM system to manage their most valuable asset: their people.</p>
+        <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-primary btn-lg rounded-pill px-5">Get Started Today</a>
+    </div>
+</div>

@@ -1,0 +1,82 @@
+@model HRMSystem.Models.Designation
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Edit Designation";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar: Actions -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-pencil-square display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">@Model.Name</h3>
+            <div class="profile-role">
+                Level @Model.Level Designation
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content: Form -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-pencil"></i> Edit Designation Details
+        </div>
+        <div class="main-content-body shadow-sm">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label asp-for="Name" class="form-label fw-bold small">Designation Name</label>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. Lead Developer" required />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ParentDesignationId" class="form-label fw-bold small">Parent Designation</label>
+                        @if (Model.ParentDesignationId == null && Model.Level == 1)
+                        {
+                            <select asp-for="ParentDesignationId" class="form-select" disabled>
+                                <option value="" selected>None (System Root - Locked)</option>
+                            </select>
+                            <input type="hidden" asp-for="ParentDesignationId" value="" />
+                        }
+                        else
+                        {
+                            <select asp-for="ParentDesignationId" class="form-select" required>
+                                <option value="0">None (System Root)</option>
+                                @if (ViewBag.ParentDesignations != null)
+                                {
+                                    foreach (var p in (IEnumerable<HRMSystem.Models.Designation>)ViewBag.ParentDesignations)
+                                    {
+                                        <option value="@p.Id">@p.Name (Level @p.Level)</option>
+                                    }
+                                }
+                            </select>
+                        }
+                        <span asp-validation-for="ParentDesignationId" class="text-danger small"></span>
+                        <div class="form-text small text-info mt-1">
+                            <i class="bi bi-info-circle me-1"></i> The level will be calculated automatically as <strong>Parent Level + 1</strong>. Employees can only report to higher levels.
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-5">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold">
+                            <i class="bi bi-save me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

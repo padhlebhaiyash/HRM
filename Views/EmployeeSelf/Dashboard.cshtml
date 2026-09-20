@@ -1,0 +1,457 @@
+@model HRMSystem.Models.Employee
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Employee Dashboard";
+
+    var leaveBalances = ViewBag.LeaveBalances as IEnumerable<HRMSystem.Models.LeaveBalance>;
+    
+    // Calculate time at work (robust against joining dates in the future)
+    var timeAtWork = DateTime.Now > Model.DateOfJoining ? (DateTime.Now - Model.DateOfJoining) : TimeSpan.Zero;
+    int years = (int)(timeAtWork.TotalDays / 365.25);
+    int months = (int)((timeAtWork.TotalDays % 365.25) / 30);
+    int days = (int)((timeAtWork.TotalDays % 365.25) % 30);
+}
+
+<div class="row">
+    <!-- Left Sidebar: Profile -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <!-- Profile Box -->
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(Model.FullName)&size=250&background=random" 
+                 alt="Profile Photo" class="profile-img mb-3" />
+            <h3 class="profile-name">@Model.FullName</h3>
+            <div class="profile-role">
+                @Model.Designation?.Name<br>
+                @Model.Department?.Name
+            </div>
+            <div class="status-box">
+                At work for : @years y @months m @days d
+            </div>
+        </div>
+
+        <!-- Leave Status -->
+        <div class="section-header">
+            <i class="bi bi-eye"></i> Leave Status
+        </div>
+        
+        <table class="table table-sm table-bordered text-center" style="font-size: 0.85rem; color: #555;">
+            <thead>
+                <tr style="background-color: #90A4AE; color: white;">
+                    <th>Leaves</th>
+                    <th>Used</th>
+                    <th>Balanced</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (leaveBalances != null)
+                {
+                    foreach(var balance in leaveBalances)
+                    {
+                        string leaveAlias = balance.LeaveType?.Code switch
+                        {
+                            "Earned" => "EL",
+                            "Sick" => "SL",
+                            "Casual" => "CL",
+                            "Unpaid" => "Unpaid",
+                            _ => balance.LeaveType?.Name ?? "Unknown"
+                        };
+
+                        <tr>
+                            <td>@leaveAlias</td>
+                            <td>@balance.Used.ToString("G29")</td>
+                            <td>@balance.Balance.ToString("G29")</td>
+                            <td>@balance.Allocated.ToString("G29")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <!-- Who's on Leave -->
+        <div class="section-header mt-4">
+            <i class="bi bi-calendar-event"></i> Team Calendar
+        </div>
+        <div class="d-grid">
+            <a asp-action="TeamCalendar" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                <i class="bi bi-people-fill me-1"></i> Who's on Leave?
+            </a>
+        </div>
+
+        <!-- Birthdays -->
+        <div class="section-header mt-4">
+            <i class="bi bi-gift"></i> Birthdays
+        </div>
+        @if (ViewBag.Birthdays != null && ((IEnumerable<HRMSystem.Models.Employee>)ViewBag.Birthdays).Any())
+        {
+            foreach (var bday in (IEnumerable<HRMSystem.Models.Employee>)ViewBag.Birthdays)
+            {
+                <div class="d-flex align-items-center p-2 border bg-white mb-2 shadow-sm" style="border-radius: 4px;">
+                    <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(bday.FullName)&background=random" class="rounded-circle me-3" width="40" />
+                    <div class="small">
+                        <strong>@bday.FullName</strong> has birthday on<br>
+                        <span class="text-primary fw-bold">@bday.DateOfBirth?.ToString("dd MMMM")</span>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-muted small">
+                No birthdays upcoming.
+            </div>
+        }
+    </div>
+
+    <!-- Right Content: Clock In/Out & Leave Requests -->
+    <div class="col-lg-9 col-md-8">
+        @{
+            var todayAttendance = ViewBag.TodayAttendance as HRMSystem.Models.Attendance;
+            var officeLocations = ViewBag.OfficeLocations as IEnumerable<HRMSystem.Models.OfficeLocation>;
+            var mainOffice = officeLocations?.FirstOrDefault(l => l.IsActive);
+            bool isClockedIn = todayAttendance != null && todayAttendance.ClockInTime.HasValue;
+            bool isClockedOut = todayAttendance != null && todayAttendance.ClockOutTime.HasValue;
+        }
+
+        <!-- Clock In / Clock Out Geofenced Widget -->
+        <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border-top: 4px solid #F15A24 !important;">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 border-bottom pb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark d-flex align-items-center">
+                            <i class="bi bi-geo-alt-fill text-danger me-2 fs-4"></i> Workplace Location Attendance
+                        </h5>
+                        <div class="text-muted small">
+                            <i class="bi bi-building me-1"></i> Designated Office: 
+                            <span class="fw-bold text-dark">@(mainOffice?.Name ?? "Main Office Site")</span> 
+                            <span class="badge bg-light text-dark border ms-1"><i class="bi bi-bullseye me-1 text-primary"></i>Radius: @(mainOffice?.AllowedRadiusMeters ?? 300)m</span>
+                        </div>
+                    </div>
+                    <div class="text-end mt-2 mt-sm-0">
+                        <div id="liveDigitalClock" class="fw-bold fs-3 text-primary font-monospace mb-0" style="letter-spacing: 1px;">--:--:-- --</div>
+                        <div class="text-muted small" id="liveDateStr">@DateTime.Today.ToString("dddd, dd MMMM yyyy")</div>
+                    </div>
+                </div>
+
+                <!-- GPS Location Verification Banner -->
+                <div id="gpsStatusBanner" class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center justify-content-between rounded-3" style="font-size: 0.85rem;">
+                    <div>
+                        <span id="gpsStatusIcon" class="spinner-border spinner-border-sm me-2 text-info" role="status"></span>
+                        <span id="gpsStatusText">Detecting your location perimeter...</span>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0" onclick="checkUserLocationStatus()" style="font-size: 0.75rem;">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh GPS
+                    </button>
+                </div>
+
+                <!-- Alert Feedback Box -->
+                <div id="clockAlertBox" class="d-none alert alert-dismissible fade show" role="alert">
+                    <span id="clockAlertMessage"></span>
+                    <button type="button" class="btn-close" onclick="$('#clockAlertBox').addClass('d-none')"></button>
+                </div>
+
+                <div class="row align-items-center g-3">
+                    <!-- Action Buttons -->
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2">
+                            <button id="btnClockIn" type="button" class="btn btn-success btn-lg w-50 py-3 shadow-sm rounded-3 fw-bold d-flex flex-column align-items-center justify-content-center @(isClockedIn ? "disabled opacity-50" : "")" onclick="performClockIn()">
+                                <span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span>
+                                <span class="fw-normal" style="font-size:0.75rem;">Require GPS Location</span>
+                            </button>
+                            
+                            <button id="btnClockOut" type="button" class="btn btn-danger btn-lg w-50 py-3 shadow-sm rounded-3 fw-bold d-flex flex-column align-items-center justify-content-center @(!isClockedIn || isClockedOut ? "disabled opacity-50" : "")" onclick="performClockOut()">
+                                <span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span>
+                                <span class="fw-normal" style="font-size:0.75rem;">Require GPS Location</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Log Status Summary -->
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="row text-center g-2">
+                                <div class="col-4 border-end">
+                                    <div class="text-muted small">Clock In</div>
+                                    <div id="summaryClockInTime" class="fw-bold text-dark fs-6 mt-1">
+                                        @(isClockedIn ? todayAttendance?.ClockInTime?.ToString("hh:mm tt") : "--:--")
+                                    </div>
+                                </div>
+                                <div class="col-4 border-end">
+                                    <div class="text-muted small">Clock Out</div>
+                                    <div id="summaryClockOutTime" class="fw-bold text-dark fs-6 mt-1">
+                                        @(isClockedOut ? todayAttendance?.ClockOutTime?.ToString("hh:mm tt") : "--:--")
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-muted small">Duration</div>
+                                    <div id="summaryWorkDuration" class="fw-bold text-primary fs-6 mt-1">
+                                        @(todayAttendance?.DisplayWorkDuration ?? "--")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-center border-top pt-2" style="font-size: 0.8rem;">
+                                Status: 
+                                <span id="summaryStatusBadge">
+                                    @if (!isClockedIn)
+                                    {
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Not Clocked In Today</span>
+                                    }
+                                    else if (isClockedIn && !isClockedOut)
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Clocked In (Active)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary"><i class="bi bi-flag-fill me-1"></i>Shift Completed</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Leave Requests Table -->
+        <div class="main-content-header">
+            <i class="bi bi-calendar3"></i> My Recent Leave Requests
+        </div>
+        <div class="main-content-body shadow-sm p-0 mb-4">
+            @{
+                var leaves = ViewBag.RecentLeaves as IEnumerable<HRMSystem.Models.LeaveRequest>;
+            }
+            @if (leaves != null && leaves.Any())
+            {
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Type</th>
+                            <th>Duration</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Applied</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in leaves)
+                        {
+                            <tr>
+                                <td class="ps-3"><span class="badge bg-light text-dark border">@l.LeaveType?.Name</span></td>
+                                <td class="small">@l.DisplayDates</td>
+                                <td>@l.TotalDays</td>
+                                <td><span class="text-truncate d-inline-block" style="max-width:160px;" title="@l.Reason">@l.Reason</span></td>
+                                <td>
+                                    @if (l.Status == HRMSystem.Models.LeaveStatus.Pending)
+                                    { <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending</span> }
+                                    else if (l.Status == HRMSystem.Models.LeaveStatus.Approved)
+                                    { <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved</span> }
+                                    else
+                                    { <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span> }
+                                </td>
+                                <td class="text-muted small">@l.AppliedAt.ToString("dd MMM")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-calendar-x fs-1 opacity-25"></i>
+                    <p class="mt-2 mb-0">No leave requests yet.</p>
+                    <a asp-controller="EmployeeSelf" asp-action="ApplyLeave" class="btn btn-sm btn-primary mt-3 rounded-pill px-4">
+                        <i class="bi bi-plus-circle me-1"></i>Apply for Leave
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            $('#liveDigitalClock').text(timeStr);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        let currentLatitude = null;
+        let currentLongitude = null;
+
+        // Haversine distance in meters
+        function calculateHaversineMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function checkUserLocationStatus() {
+            $('#gpsStatusIcon').removeClass().addClass('spinner-border spinner-border-sm me-2 text-info');
+            $('#gpsStatusText').text('Detecting your GPS location...');
+
+            if (!navigator.geolocation) {
+                $('#gpsStatusBanner').removeClass('alert-info alert-success').addClass('alert-danger');
+                $('#gpsStatusIcon').removeClass().addClass('bi bi-exclamation-triangle-fill me-2 text-danger');
+                $('#gpsStatusText').text('Geolocation is not supported by your browser.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    currentLatitude = pos.coords.latitude;
+                    currentLongitude = pos.coords.longitude;
+                    
+                    // Fetch office locations from server to test perimeter
+                    $.get('/Attendance/GetTodayStatus', function(data) {
+                        if (data && data.officeLocations && data.officeLocations.length > 0) {
+                            let nearestDist = Infinity;
+                            let inside = false;
+                            let nearestLoc = null;
+
+                            data.officeLocations.forEach(loc => {
+                                const dist = calculateHaversineMeters(currentLatitude, currentLongitude, loc.latitude, loc.longitude);
+                                if (dist < nearestDist) {
+                                    nearestDist = dist;
+                                    nearestLoc = loc;
+                                }
+                                if (dist <= loc.allowedRadiusMeters || !loc.isEnforced) {
+                                    inside = true;
+                                }
+                            });
+
+                            const distRounded = Math.round(nearestDist);
+                            if (inside) {
+                                $('#gpsStatusBanner').removeClass('alert-info alert-danger alert-warning').addClass('alert-success');
+                                $('#gpsStatusIcon').removeClass().addClass('bi bi-check-circle-fill me-2 text-success');
+                                $('#gpsStatusText').html(`<strong>GPS Active:</strong> Inside Office Location Zone (${nearestLoc.name} - ~${distRounded}m away). Clock In/Out Permitted.`);
+                            } else {
+                                $('#gpsStatusBanner').removeClass('alert-info alert-success alert-warning').addClass('alert-danger');
+                                $('#gpsStatusIcon').removeClass().addClass('bi bi-x-circle-fill me-2 text-danger');
+                                $('#gpsStatusText').html(`<strong>Outside Perimeter:</strong> You are ~${distRounded}m away from ${nearestLoc.name} (Allowed: ${nearestLoc.allowedRadiusMeters}m). Clock In/Out Restricted.`);
+                            }
+                        }
+                    });
+                },
+                function (err) {
+                    $('#gpsStatusBanner').removeClass('alert-info alert-success').addClass('alert-warning');
+                    $('#gpsStatusIcon').removeClass().addClass('bi bi-geo-alt-fill me-2 text-warning');
+                    $('#gpsStatusText').text('Location Permission Required: Click Clock In/Out to request GPS access.');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        $(document).ready(function() {
+            checkUserLocationStatus();
+        });
+
+        function performClockIn() {
+            if (!navigator.geolocation) {
+                showAlert('danger', 'Geolocation is not supported by your browser.');
+                return;
+            }
+
+            $('#btnClockIn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm mb-1"></span> Locating...');
+
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
+                    $.ajax({
+                        url: '/Attendance/ClockIn',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ latitude: lat, longitude: lng }),
+                        success: function(res) {
+                            if (res.success) {
+                                showAlert('success', res.message);
+                                $('#summaryClockInTime').text(res.clockInTime);
+                                $('#summaryStatusBadge').html('<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Clocked In (Active)</span>');
+                                $('#btnClockIn').addClass('disabled opacity-50').html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                                $('#btnClockOut').removeClass('disabled opacity-50').prop('disabled', false);
+                                checkUserLocationStatus();
+                            } else {
+                                showAlert('danger', res.message);
+                                $('#btnClockIn').prop('disabled', false).html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                            }
+                        },
+                        error: function() {
+                            showAlert('danger', 'An error occurred while attempting to clock in.');
+                            $('#btnClockIn').prop('disabled', false).html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                        }
+                    });
+                },
+                function(err) {
+                    showAlert('danger', 'Location access denied or unavailable. Please enable browser location permissions to Clock In.');
+                    $('#btnClockIn').prop('disabled', false).html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function performClockOut() {
+            if (!navigator.geolocation) {
+                showAlert('danger', 'Geolocation is not supported by your browser.');
+                return;
+            }
+
+            $('#btnClockOut').prop('disabled', true).html('<span class="spinner-border spinner-border-sm mb-1"></span> Locating...');
+
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
+                    $.ajax({
+                        url: '/Attendance/ClockOut',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ latitude: lat, longitude: lng }),
+                        success: function(res) {
+                            if (res.success) {
+                                showAlert('success', res.message);
+                                $('#summaryClockOutTime').text(res.clockOutTime);
+                                $('#summaryWorkDuration').text(res.duration);
+                                $('#summaryStatusBadge').html('<span class="badge bg-primary"><i class="bi bi-flag-fill me-1"></i>Shift Completed</span>');
+                                $('#btnClockOut').addClass('disabled opacity-50').html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                                checkUserLocationStatus();
+                            } else {
+                                showAlert('danger', res.message);
+                                $('#btnClockOut').prop('disabled', false).html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                            }
+                        },
+                        error: function() {
+                            showAlert('danger', 'An error occurred while attempting to clock out.');
+                            $('#btnClockOut').prop('disabled', false).html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                        }
+                    });
+                },
+                function(err) {
+                    showAlert('danger', 'Location access denied or unavailable. Please enable browser location permissions to Clock Out.');
+                    $('#btnClockOut').prop('disabled', false).html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function showAlert(type, text) {
+            const formattedText = text.replace(/\n/g, '<br>');
+            $('#clockAlertBox')
+                .removeClass('d-none alert-success alert-danger alert-info alert-warning')
+                .addClass('alert-' + type);
+            $('#clockAlertMessage').html(formattedText);
+        }
+    </script>
+}
+

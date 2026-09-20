@@ -1,0 +1,181 @@
+@using HRMSystem.Models
+@model HRMSystem.Models.Employee
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Register Employee";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-person-plus-fill display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">New Registration</h3>
+            <div class="profile-role">
+                Admin Control
+            </div>
+            <div class="status-box">
+                Onboarding
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+
+        <!-- Designation Hierarchy Reference -->
+        @if (ViewBag.AllDesignations != null)
+        {
+            <div class="card mt-4 shadow-sm border-0 rounded-4 overflow-hidden">
+                <div class="card-header bg-dark text-white fw-bold py-2 small d-flex align-items-center">
+                    <i class="bi bi-diagram-3-fill me-2"></i> Rank Hierarchy
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush small" style="font-size: 0.8rem;">
+                        @foreach (var d in ((IEnumerable<HRMSystem.Models.Designation>)ViewBag.AllDesignations).OrderBy(d => d.Level))
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                <span>
+                                    @for (int i = 1; i < d.Level; i++)
+                                    {
+                                        <span class="text-muted opacity-50">&bull;&nbsp;</span>
+                                    }
+                                    <span class="fw-bold text-dark">@d.Name</span>
+                                </span>
+                                <span class="badge bg-primary rounded-pill">L@(d.Level)</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-person-plus"></i> Employee Registration Form
+        </div>
+        <div class="main-content-body shadow-sm">
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-4"></div>
+
+                <div class="row g-4">
+                    <div class="col-md-12">
+                        <h6 class="fw-bold text-uppercase text-muted border-bottom pb-2 mb-3">Personal Information</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="EmployeeCode" class="form-label fw-bold small">Employee Code</label>
+                        <input asp-for="EmployeeCode" class="form-control" placeholder="EMP001" />
+                        <span asp-validation-for="EmployeeCode" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="FirstName" class="form-label fw-bold small">First Name</label>
+                        <input asp-for="FirstName" class="form-control" />
+                        <span asp-validation-for="FirstName" class="text-danger small"></span>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label asp-for="LastName" class="form-label fw-bold small">Last Name</label>
+                        <input asp-for="LastName" class="form-control" />
+                        <span asp-validation-for="LastName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-12 mt-4">
+                        <h6 class="fw-bold text-uppercase text-muted border-bottom pb-2 mb-3">Employment Details</h6>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="DepartmentId" class="form-label fw-bold small">Department</label>
+                        <select asp-for="DepartmentId" class="form-select" asp-items="ViewBag.DepartmentId">
+                            <option value="">-- Choose Department --</option>
+                        </select>
+                        <span asp-validation-for="DepartmentId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="DesignationId" class="form-label fw-bold small">Designation</label>
+                        <select asp-for="DesignationId" class="form-select" id="designationSelect" asp-items="ViewBag.DesignationId">
+                            <option value="">-- Choose Designation --</option>
+                        </select>
+                        <span asp-validation-for="DesignationId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="ManagerId" class="form-label fw-bold small">Reporting Manager</label>
+                        <select asp-for="ManagerId" class="form-select" id="managerSelect" asp-items="ViewBag.ManagerId">
+                            <option value="">-- Select Designation First --</option>
+                        </select>
+                        <span asp-validation-for="ManagerId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Salary" class="form-label fw-bold small">Salary</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="Salary" class="form-control" type="number" step="100" required />
+                        </div>
+                        <span asp-validation-for="Salary" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="DateOfJoining" class="form-label fw-bold small">Date of Joining</label>
+                        <input asp-for="DateOfJoining" class="form-control" type="date" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="DateOfJoining" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label fw-bold small">Email Address</label>
+                        <input asp-for="Email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small">Username</label>
+                        <input name="username" class="form-control" required />
+                        <span class="text-danger small">@Html.ValidationMessage("username")</span>
+                    </div>
+
+                    <div class="col-12 mt-5">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold">Register Employee</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#designationSelect').change(function () {
+                var designationId = $(this).val();
+                var managerSelect = $('#managerSelect');
+                managerSelect.empty();
+                managerSelect.append('<option value="">-- Loading Managers --</option>');
+                
+                if (designationId) {
+                    var url = '/Employee/GetEligibleManagers?designationId=' + designationId;
+                    $.getJSON(url, function (data) {
+                        managerSelect.empty();
+                        managerSelect.append('<option value="">-- Select Reporting Manager --</option>');
+                        $.each(data, function (index, item) {
+                            managerSelect.append('<option value="' + item.id + '">' + item.fullName + ' (' + item.designationName + ')</option>');
+                        });
+                    });
+                } else {
+                    managerSelect.empty();
+                    managerSelect.append('<option value="">-- Select Designation First --</option>');
+                }
+            });
+        });
+    </script>
+}
+

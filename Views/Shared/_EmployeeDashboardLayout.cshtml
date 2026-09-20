@@ -1,0 +1,266 @@
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@inject HRMSystem.Data.ApplicationDbContext DbContext
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Employee Dashboard</title>
+    
+    <!-- Using same styles from Login for consistency -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FullCalendar CSS and Scripts will be yielded here -->
+    @await RenderSectionAsync("Styles", required: false)
+
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #f7f9fa; /* Light grey background from snapshot */
+            color: #444;
+        }
+
+        /* Top Navigation Styling */
+        .emp-navbar {
+            background-color: #ffffff;
+            border-bottom: 2px solid #F15A24; /* Distinctive Orange line */
+            padding: 0;
+            display: flex;
+            align-items: stretch;
+            height: 60px;
+        }
+
+        .emp-logo {
+            font-weight: 300;
+            font-size: 2rem;
+            color: #777;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+        }
+
+        .emp-nav-links {
+            display: flex;
+            margin-left: auto;
+            align-items: stretch;
+            list-style: none;
+            margin-bottom: 0;
+            padding-left: 0;
+        }
+
+        .emp-nav-link {
+            text-decoration: none;
+            color: #666;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            text-transform: uppercase;
+        }
+
+        .emp-nav-link:hover {
+            color: #333;
+            background-color: #f0f0f0;
+        }
+
+        .emp-nav-link.active {
+            background-color: #90A4AE; /* Grey box */
+            color: #ffffff;
+        }
+
+        /* Main Container */
+        .dashboard-container {
+            max-width: 1300px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        /* Profile Left Sidebar Styles */
+        .profile-img {
+            width: 100%;
+            object-fit: cover;
+            aspect-ratio: 4/5;
+            background-color: #ddd;
+        }
+        
+        .profile-name {
+            font-size: 1.4rem;
+            color: #5d7b9d;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .profile-role {
+            font-size: 0.85rem;
+            color: #777;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .status-box {
+            background-color: #90A4AE;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            color: #777;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            margin-top: 30px;
+        }
+
+        /* Content Area Styles */
+        .main-content-header {
+            background-color: #90A4AE;
+            color: white;
+            padding: 8px 15px;
+            font-size: 1.1rem;
+        }
+
+        .main-content-body {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="emp-navbar shadow-sm">
+        @{
+            var companySetting = DbContext.CompanySettings.FirstOrDefault();
+            var companyName = companySetting?.CompanyName;
+            var logoPath = companySetting?.LogoImagePath;
+        }
+        <a asp-controller="EmployeeSelf" asp-action="Profile" class="emp-logo">
+            @if (!string.IsNullOrEmpty(logoPath))
+            {
+                <img src="@logoPath" alt="@companyName" style="max-height: 40px; width: auto; object-fit: contain; vertical-align: middle;" />
+            }
+            else if (!string.IsNullOrEmpty(companyName))
+            {
+                @companyName
+            }
+        </a>
+        <ul class="emp-nav-links">
+            @{
+                var loginPortal = HttpContextAccessor.HttpContext?.Session.GetString("LoginPortal") ?? "Employee";
+                var userRoles = HttpContextAccessor.HttpContext?.Session.GetString("UserRoles") ?? "";
+                var isAdmin = userRoles.Contains("Admin");
+            }
+
+            @if (loginPortal == "Manager" && !isAdmin)
+            {
+                <li><a asp-controller="Manager" asp-action="Dashboard" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "ManagerHome" ? "active" : "")">Team Overview</a></li>
+                <li class="dropdown">
+                    <a href="#" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "TeamLeaves" ? "active" : "")" data-bs-toggle="dropdown">
+                        Team Management <i class="bi bi-chevron-down ms-1" style="font-size:10px;"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-start rounded-0 shadow-sm border-0">
+                        <li><a class="dropdown-item" asp-controller="Manager" asp-action="Dashboard">Pending Approvals</a></li>
+                        <li><a class="dropdown-item" asp-controller="Manager" asp-action="TeamLeaves">Team History</a></li>
+                        <li><div class="dropdown-divider"></div></li>
+                        <li><a class="dropdown-item" asp-controller="EmployeeSelf" asp-action="TeamCalendar">Team Calendar</a></li>
+                    </ul>
+                </li>
+            }
+
+            @if (ViewData["ActivePage"]?.ToString() != "Admin")
+            {
+                <li><a asp-controller="EmployeeSelf" asp-action="Dashboard" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "active" : "")">My Dashboard</a></li>
+                <li><a asp-controller="EmployeeSelf" asp-action="Profile" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "Home" ? "active" : "")">My Profile</a></li>
+                <li><a asp-controller="Attendance" asp-action="MyAttendance" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "Attendance" ? "active" : "")">My Attendance</a></li>
+                <li class="dropdown">
+                    <a href="#" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "Leaves" ? "active" : "")" data-bs-toggle="dropdown">
+                        My Leaves <i class="bi bi-chevron-down ms-1" style="font-size:10px;"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-start rounded-0 shadow-sm border-0">
+                        <li><a class="dropdown-item" asp-controller="EmployeeSelf" asp-action="ApplyLeave">Apply Leave</a></li>
+                        <li><a class="dropdown-item" asp-controller="EmployeeSelf" asp-action="MyLeaves">My History</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "Self" ? "active" : "")" data-bs-toggle="dropdown">
+                        My Payroll <i class="bi bi-chevron-down ms-1" style="font-size:10px;"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-start rounded-0 shadow-sm border-0">
+                        <li><a class="dropdown-item" asp-controller="EmployeeSelf" asp-action="MyPayroll">My Payslips</a></li>
+                    </ul>
+                </li>
+            }
+            
+            @if (isAdmin)
+            {
+                <li class="dropdown">
+                    <a href="#" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "Admin" ? "active" : "")" data-bs-toggle="dropdown">
+                        Admin Panel <i class="bi bi-chevron-down ms-1" style="font-size:10px;"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-start rounded-0 shadow-sm border-0">
+                        <li><a class="dropdown-item" asp-controller="Admin" asp-action="Dashboard">Dashboard</a></li>
+                        <li><a class="dropdown-item" asp-controller="Attendance" asp-action="AdminIndex"><i class="bi bi-clock-history me-1"></i> Attendance Logs</a></li>
+                        <li><a class="dropdown-item" asp-controller="Attendance" asp-action="ManageLocations"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Office Locations</a></li>
+                        <li><div class="dropdown-divider"></div></li>
+                        <li><a class="dropdown-item" asp-controller="Employee" asp-action="Index">Manage Employees</a></li>
+                        <li><a class="dropdown-item" asp-controller="Department" asp-action="Index">Manage Departments</a></li>
+                        <li><a class="dropdown-item" asp-controller="Leave" asp-action="Index">Leave Requests</a></li>
+                        <li><a class="dropdown-item" asp-controller="LeaveBalance" asp-action="Index">Leave Balances</a></li>
+                        <li><a class="dropdown-item" asp-controller="LeaveType" asp-action="Index">Manage Leave Types</a></li>
+                        <li><a class="dropdown-item" asp-controller="Designation" asp-action="Index">Manage Designations</a></li>
+                        <li><a class="dropdown-item" asp-controller="Admin" asp-action="ProfileRequests">Profile Approvals</a></li>
+                        <li><a class="dropdown-item" asp-controller="Payroll" asp-action="Generate">Generate Payroll</a></li>
+                        <li><div class="dropdown-divider"></div></li>
+                        <li><a class="dropdown-item fw-bold text-primary" asp-controller="Admin" asp-action="CustomizePortal"><i class="bi bi-sliders me-1"></i> Customize Portal</a></li>
+                    </ul>
+                </li>
+            }
+            
+            @if (isAdmin)
+            {
+                <li><a asp-controller="Admin" asp-action="Dashboard" class="emp-nav-link text-primary fw-bold" style="background:rgba(241, 90, 36, 0.05)"><i class="bi bi-shield-lock me-1"></i>Admin</a></li>
+            }
+
+            <li class="dropdown">
+                <a href="#" class="emp-nav-link" data-bs-toggle="dropdown">
+                    My Account <i class="bi bi-chevron-down ms-1" style="font-size:10px;"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end rounded-0 shadow-sm border-0">
+                    <li><a class="dropdown-item" asp-controller="Auth" asp-action="Logout">Logout</a></li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+
+    <!-- Main Content -->
+    <div class="dashboard-container">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @Html.Raw(TempData["SuccessMessage"])
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @RenderBody()
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

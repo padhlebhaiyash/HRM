@@ -1,0 +1,121 @@
+@model HRMSystem.Models.Employee
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Employee Details";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                {
+                    <img src="@Model.PhotoPath" class="rounded-circle border" style="width: 120px; height: 120px; object-fit: cover;" alt="Profile" />
+                }
+                else
+                {
+                    <i class="bi bi-person-circle display-1 text-primary opacity-25"></i>
+                }
+            </div>
+            <h3 class="profile-name">@Model.FullName</h3>
+            <div class="profile-role">
+                @Model.Designation?.Name
+            </div>
+            <div class="status-box">
+                @Model.EmployeeCode
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-primary rounded-pill fw-bold">
+                <i class="bi bi-pencil me-1"></i> Edit Profile
+            </a>
+            <a asp-controller="LeaveBalance" asp-action="Index" class="btn btn-sm btn-outline-info rounded-pill fw-bold">
+                <i class="bi bi-wallet2 me-1"></i> Leave Balances
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-person-badge"></i> Detailed Employee Profile
+        </div>
+        <div class="main-content-body shadow-sm">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="detail-label small text-uppercase text-muted fw-bold">Full Name</div>
+                    <div class="detail-value fw-bold">@Model.FullName</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-label small text-uppercase text-muted fw-bold">Email Address</div>
+                    <div class="detail-value text-primary">@Model.Email</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-label small text-uppercase text-muted fw-bold">Department</div>
+                    <div class="detail-value">
+                        <span class="badge bg-light text-dark border rounded-pill px-3">
+                            @Model.Department?.Name
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-label small text-uppercase text-muted fw-bold">Status</div>
+                    <div class="detail-value">
+                        @if (Model.IsActive)
+                        {
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3"><i class="bi bi-check-circle me-1"></i>Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+                        }
+                    </div>
+                </div>
+                
+                <div class="col-12 mt-4 pt-4 border-top">
+                    <h6 class="fw-bold text-uppercase text-muted mb-3">Employment Details</h6>
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <div class="detail-label small text-muted">Joining Date</div>
+                            <div class="detail-value">@Model.DateOfJoining.ToString("dd MMM yyyy")</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="detail-label small text-muted">Basic Salary</div>
+                            <div class="detail-value text-success fw-bold">@Model.Salary.ToString("C")</div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="detail-label small text-muted">System Username</div>
+                            <div class="detail-value font-monospace">@Model.User?.Username</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 mt-4 pt-4 border-top">
+                    <h6 class="fw-bold text-uppercase text-muted mb-3">Roles & Permissions</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (Model.User?.UserRoles != null)
+                        {
+                            foreach (var ur in Model.User.UserRoles)
+                            {
+                                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning rounded-pill px-3">
+                                    <i class="bi bi-shield-lock me-1"></i> @ur.Role?.Name
+                                </span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted small">No special roles assigned.</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

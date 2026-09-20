@@ -1,0 +1,110 @@
+@using HRMSystem.Models
+@model IEnumerable<HRMSystem.Models.LeaveRequest>
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Leave Requests (Admin)";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-envelope-paper-fill display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">Leave Management</h3>
+            <div class="profile-role">
+                Admin Control
+            </div>
+            <div class="status-box">
+                Approval Desk
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-controller="Admin" asp-action="Dashboard" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header">
+            <i class="bi bi-envelope-paper"></i> Pending & Recent Leave Requests
+        </div>
+        <div class="main-content-body shadow-sm p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Employee</th>
+                            <th>Type</th>
+                            <th>Dates</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                            <th class="text-end pe-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold">@item.Employee?.FullName</td>
+                                <td><span class="badge bg-light text-dark border">@item.LeaveType?.Name</span></td>
+                                <td class="small">@item.DisplayDates</td>
+                                <td>@item.TotalDays</td>
+                                <td>
+                                    @if (item.Status == LeaveStatus.Pending) { <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending</span> }
+                                    else if (item.Status == LeaveStatus.Approved) { <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved</span> }
+                                    else { <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span> }
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                                        @if (item.Status == LeaveStatus.Pending)
+                                        {
+                                            <form asp-action="Approve" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-success rounded-pill" onclick="return confirm('Approve this leave request?');">
+                                                    Approve
+                                                </button>
+                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill"
+                                                    onclick="openRejectModal(@item.Id, '@item.Employee?.FullName', '')">
+                                                Reject
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Delete" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                                        onclick="return confirm('Delete this request?');">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="6" class="text-center py-4 text-muted">No leave requests found.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@await Html.PartialAsync("_RejectModal")
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    </script>
+}
+

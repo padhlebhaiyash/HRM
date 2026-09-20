@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - HRM System Auth</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: linear-gradient(135deg, #7b858f, #484e56);
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 15px;
+        }
+
+        .login-card {
+            background-color: #ffffff;
+            border-radius: 0;
+            border: none;
+            border-top: 4px solid #F15A24;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo-text {
+            font-weight: 300;
+            font-size: 2.5rem;
+            color: #555;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            margin: 20px 0 10px;
+        }
+
+        .custom-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin: 20px 30px 15px;
+            padding-bottom: 0;
+        }
+        .custom-tab {
+            font-size: 0.9rem;
+            color: #777;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            margin-right: 5px;
+        }
+        .custom-tab i {
+            margin-right: 6px;
+            font-size: 1.1rem;
+        }
+        .custom-tab.active {
+            color: #555;
+            border-bottom: 3px solid #7bc043;
+        }
+
+        .form-section {
+            padding: 10px 30px;
+        }
+
+        .input-group-custom {
+            display: flex;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        .input-group-text-custom {
+            background-color: #f7f7f7;
+            border: none;
+            border-right: 1px solid #ddd;
+            width: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 1.1rem;
+        }
+
+        .form-control-custom {
+            border: none;
+            box-shadow: none;
+            padding: 12px 15px;
+            font-size: 0.95rem;
+            color: #555;
+            width: 100%;
+            outline: none;
+        }
+        .form-control-custom::placeholder {
+            color: #bbb;
+        }
+
+        .checkbox-container {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-container input {
+            margin-right: 8px;
+        }
+
+        .btn-login {
+            background-color: #F15A24;
+            color: white;
+            border: none;
+            border-radius: 0;
+            padding: 10px;
+            font-weight: 400;
+            border-radius: 2px;
+            width: 100%;
+            transition: 0.2s;
+        }
+        .btn-login:hover {
+            background-color: #e04f1e;
+            color: white;
+        }
+
+        .forgot-section {
+            padding: 15px 30px 25px;
+            color: #666;
+        }
+        .forgot-title {
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 400;
+        }
+        .forgot-subtitle {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .forgot-link {
+            color: #888;
+            text-decoration: underline;
+        }
+        .forgot-link:hover {
+            color: #555;
+        }
+
+        .btn-frontend {
+            background-color: #428bca;
+            color: white;
+            border: none;
+            border-radius: 0;
+            padding: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-frontend:hover {
+            background-color: #357ebd;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        @RenderBody()
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

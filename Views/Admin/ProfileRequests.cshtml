@@ -1,0 +1,248 @@
+@model IEnumerable<HRMSystem.Models.ProfileChangeRequest>
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Pending Profile Changes";
+    ViewData["ActivePage"] = "Admin";
+}
+
+<div class="row">
+    <!-- Left Sidebar: Actions -->
+    <div class="col-lg-3 col-md-4 mb-4">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-shield-check display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">Profile Approvals</h3>
+            <div class="profile-role">
+                Administrator
+            </div>
+            <div class="status-box">
+                Approval Panel
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-controller="Admin" asp-action="Dashboard" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content: Pending Changes list -->
+    <div class="col-lg-9 col-md-8">
+        <div class="main-content-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person-fill-lock"></i> Pending Profile Changes</span>
+        </div>
+        <div class="main-content-body shadow-sm p-4 bg-white">
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-check2-circle display-4 text-success opacity-50 mb-3 d-block"></i>
+                    <h5 class="fw-bold">No Pending Requests</h5>
+                    <p class="small">All employee profile information is up to date.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var request in Model)
+                {
+                    var employee = request.Employee;
+                    var empPhoto = string.IsNullOrEmpty(employee?.PhotoPath) 
+                        ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(employee?.FullName ?? "")}&size=250&background=random" 
+                        : employee.PhotoPath;
+                    
+                    var proposedPhoto = string.IsNullOrEmpty(request.PhotoPath) ? empPhoto : request.PhotoPath;
+                    
+                    var hasPhotoChange = !string.IsNullOrEmpty(request.PhotoPath) && request.PhotoPath != employee?.PhotoPath;
+                    var hasLocalAddressChange = !string.IsNullOrEmpty(request.LocalAddress) && request.LocalAddress != employee?.LocalAddress;
+                    var hasPermanentAddressChange = !string.IsNullOrEmpty(request.PermanentAddress) && request.PermanentAddress != employee?.PermanentAddress;
+                    
+                    var hasFathersNameChange = !string.IsNullOrEmpty(request.FathersName) && request.FathersName != employee?.FathersName;
+                    var hasDateOfBirthChange = request.DateOfBirth.HasValue && request.DateOfBirth != employee?.DateOfBirth;
+                    var hasGenderChange = request.Gender.HasValue && request.Gender != employee?.Gender;
+                    var hasPhoneChange = !string.IsNullOrEmpty(request.Phone) && request.Phone != employee?.Phone;
+
+                    <div class="card border border-light shadow-sm rounded-4 mb-4 overflow-hidden">
+                        <div class="card-header bg-light py-3 border-bottom d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                @if (string.IsNullOrEmpty(employee?.PhotoPath))
+                                {
+                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold" style="width:40px;height:40px;font-size:0.9rem;">
+                                        @(employee != null ? $"{employee.FirstName[0]}{employee.LastName[0]}" : "EE")
+                                    </div>
+                                }
+                                else
+                                {
+                                    <img src="@employee.PhotoPath" class="rounded-circle me-2" style="width:40px;height:40px;object-fit:cover;" />
+                                }
+                                <div>
+                                    <h6 class="mb-0 fw-bold">@employee?.FullName</h6>
+                                    <small class="text-muted">Code: @employee?.EmployeeCode | Requested: @request.RequestedAt.ToString("g")</small>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge bg-warning text-dark px-3 py-1 rounded-pill">Pending Approval</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-4 bg-light bg-opacity-25">
+                            <div class="row g-4">
+                                <!-- Photo Comparison -->
+                                @if (hasPhotoChange)
+                                {
+                                    <div class="col-12">
+                                        <div class="fw-bold small text-muted text-uppercase mb-2"><i class="bi bi-camera-fill me-1 text-primary"></i>Profile Photo Update</div>
+                                        <div class="d-flex align-items-center justify-content-around bg-white p-3 border rounded-3">
+                                            <div class="text-center">
+                                                <small class="text-muted d-block mb-1">Current Photo</small>
+                                                <img src="@empPhoto" class="rounded border" style="width: 100px; height: 100px; object-fit: cover;" />
+                                            </div>
+                                            <div class="text-primary fs-3"><i class="bi bi-arrow-right"></i></div>
+                                            <div class="text-center">
+                                                <small class="text-success fw-bold d-block mb-1">Proposed Photo</small>
+                                                <img src="@proposedPhoto" class="rounded border border-success" style="width: 100px; height: 100px; object-fit: cover;" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Personal Details Comparison -->
+                                @if (hasFathersNameChange || hasDateOfBirthChange || hasGenderChange || hasPhoneChange)
+                                {
+                                    <div class="col-12">
+                                        <div class="fw-bold small text-muted text-uppercase mb-2"><i class="bi bi-person-fill me-1 text-primary"></i>Personal Detail Updates</div>
+                                        <div class="bg-white p-3 border rounded-3">
+                                            <div class="row g-3">
+                                                @if (hasFathersNameChange)
+                                                {
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="fw-bold small text-muted">Father's Name:</div>
+                                                        <div class="row mt-1">
+                                                            <div class="col-6 border-end">
+                                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Current:</small>
+                                                                <span class="text-muted">@(string.IsNullOrEmpty(employee?.FathersName) ? "N/A" : employee.FathersName)</span>
+                                                            </div>
+                                                            <div class="col-6 bg-success bg-opacity-5 rounded">
+                                                                <small class="text-success fw-bold d-block" style="font-size: 0.7rem;">Proposed:</small>
+                                                                <span class="fw-bold text-dark">@request.FathersName</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                @if (hasDateOfBirthChange)
+                                                {
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="fw-bold small text-muted">Date of Birth:</div>
+                                                        <div class="row mt-1">
+                                                            <div class="col-6 border-end">
+                                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Current:</small>
+                                                                <span class="text-muted">@(employee?.DateOfBirth?.ToString("dd MMM yyyy") ?? "N/A")</span>
+                                                            </div>
+                                                            <div class="col-6 bg-success bg-opacity-5 rounded">
+                                                                <small class="text-success fw-bold d-block" style="font-size: 0.7rem;">Proposed:</small>
+                                                                <span class="fw-bold text-dark">@(request.DateOfBirth?.ToString("dd MMM yyyy") ?? "N/A")</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                @if (hasGenderChange)
+                                                {
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="fw-bold small text-muted">Gender:</div>
+                                                        <div class="row mt-1">
+                                                            <div class="col-6 border-end">
+                                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Current:</small>
+                                                                <span class="text-muted">@(employee?.Gender.ToString() ?? "N/A")</span>
+                                                            </div>
+                                                            <div class="col-6 bg-success bg-opacity-5 rounded">
+                                                                <small class="text-success fw-bold d-block" style="font-size: 0.7rem;">Proposed:</small>
+                                                                <span class="fw-bold text-dark">@request.Gender</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                @if (hasPhoneChange)
+                                                {
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="fw-bold small text-muted">Phone:</div>
+                                                        <div class="row mt-1">
+                                                            <div class="col-6 border-end">
+                                                                <small class="text-muted d-block" style="font-size: 0.7rem;">Current:</small>
+                                                                <span class="text-muted">@(string.IsNullOrEmpty(employee?.Phone) ? "N/A" : employee.Phone)</span>
+                                                            </div>
+                                                            <div class="col-6 bg-success bg-opacity-5 rounded">
+                                                                <small class="text-success fw-bold d-block" style="font-size: 0.7rem;">Proposed:</small>
+                                                                <span class="fw-bold text-dark">@request.Phone</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Address Comparison -->
+                                @if (hasLocalAddressChange || hasPermanentAddressChange)
+                                {
+                                    <div class="col-12">
+                                        <div class="fw-bold small text-muted text-uppercase mb-2"><i class="bi bi-geo-alt-fill me-1 text-primary"></i>Address Updates</div>
+                                        <div class="bg-white p-3 border rounded-3">
+                                            @if (hasLocalAddressChange)
+                                            {
+                                                <div class="mb-3">
+                                                    <div class="fw-bold small text-muted">Local Address:</div>
+                                                    <div class="row mt-1">
+                                                        <div class="col-md-6 border-end">
+                                                            <small class="text-muted d-block" style="font-size: 0.75rem;">Current:</small>
+                                                            <span class="text-muted">@employee?.LocalAddress</span>
+                                                        </div>
+                                                        <div class="col-md-6 bg-success bg-opacity-5 rounded">
+                                                            <small class="text-success fw-bold d-block" style="font-size: 0.75rem;">Proposed:</small>
+                                                            <span class="fw-bold text-dark">@request.LocalAddress</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                            @if (hasPermanentAddressChange)
+                                            {
+                                                <div>
+                                                    <div class="fw-bold small text-muted">Permanent Address:</div>
+                                                    <div class="row mt-1">
+                                                        <div class="col-md-6 border-end">
+                                                            <small class="text-muted d-block" style="font-size: 0.75rem;">Current:</small>
+                                                            <span class="text-muted">@employee?.PermanentAddress</span>
+                                                        </div>
+                                                        <div class="col-md-6 bg-success bg-opacity-5 rounded">
+                                                            <small class="text-success fw-bold d-block" style="font-size: 0.75rem;">Proposed:</small>
+                                                            <span class="fw-bold text-dark">@request.PermanentAddress</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-top py-3 px-4 d-flex align-items-center justify-content-end gap-2">
+                            <form asp-action="RejectProfileRequest" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@request.Id" />
+                                <button type="submit" class="btn btn-outline-danger px-4 rounded-pill fw-bold">
+                                    <i class="bi bi-x-circle me-1"></i> Reject Changes
+                                </button>
+                            </form>
+                            <form asp-action="ApproveProfileRequest" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@request.Id" />
+                                <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold shadow-sm">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Approve & Apply
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>

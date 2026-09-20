@@ -1,0 +1,43 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+dist/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS generated
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Log and temporary text files
+*.txt
+*.log
+!README.md
+!DEPLOYMENT.md
+!CONTRIBUTING.md
+!BRANCHING.md
+
+# Package & Deployment Archives
+*.zip
+HRMSystem-Azure-Deploy.zip
+
+# Secrets & Local Environment Overrides
+appsettings.Production.json
+appsettings.*.local.json
+
+# Scratch & Temporary Scripts
+scratch/
+test_*.py
+__pycache__/
+*.pyc
+

@@ -1,0 +1,402 @@
+@model HRMSystem.Models.Employee
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "My Profile";
+    var bank = ViewBag.BankDetail as HRMSystem.Models.BankDetail;
+    var leaveBalances = Model.LeaveBalances;
+
+    // Calculate time at work
+    var timeAtWork = DateTime.Now > Model.DateOfJoining ? (DateTime.Now - Model.DateOfJoining) : TimeSpan.Zero;
+    int years = (int)(timeAtWork.TotalDays / 365.25);
+    int months = (int)((timeAtWork.TotalDays % 365.25) / 30);
+    int days = (int)((timeAtWork.TotalDays % 365.25) % 30);
+
+    string photoUrl = string.IsNullOrEmpty(Model.PhotoPath) 
+        ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(Model.FullName)}&size=250&background=random" 
+        : Model.PhotoPath;
+}
+
+@if (ViewBag.PendingRequest != null)
+{
+    <div class="alert alert-warning border-0 shadow-sm rounded-4 mb-4 py-3 d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+        <div>
+            <strong class="text-dark">Change Request Pending:</strong> You have a pending profile change request (submitted on @ViewBag.PendingRequest.RequestedAt.ToString("dd MMM yyyy, h:mm tt")) waiting for administrator approval. Once approved, your details will be updated automatically.
+        </div>
+    </div>
+}
+
+<style>
+    .profile-section-card {
+        background-color: white;
+        border: 1px solid #ddd;
+        margin-bottom: 25px;
+    }
+    .profile-section-header {
+        background-color: #90A4AE;
+        color: white;
+        padding: 8px 15px;
+        font-size: 1.05rem;
+        font-weight: 500;
+    }
+    .profile-section-body {
+        padding: 20px;
+    }
+    .profile-row {
+        display: flex;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+    }
+    .profile-label {
+        width: 160px;
+        color: #777;
+    }
+    .profile-value {
+        flex: 1;
+        color: #444;
+    }
+    .edit-btn {
+        cursor: pointer;
+        color: #428bca;
+        font-size: 0.8rem;
+        margin-left: 10px;
+    }
+    .edit-btn:hover {
+        text-decoration: underline;
+    }
+    
+    /* Notice box styles */
+    .notice-date {
+        background-color: #90A4AE;
+        color: white;
+        text-align: center;
+        width: 50px;
+        padding: 5px;
+        font-size: 0.75rem;
+        margin-right: 15px;
+    }
+    .holiday-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+</style>
+
+<div class="row">
+    <!-- Left Column: Profile Card -->
+    <div class="col-lg-3">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px; position: relative;">
+            <div style="position: relative; display: inline-block;">
+                <img src="@photoUrl" alt="Profile Photo" class="profile-img mb-3" id="profileImageDisplay" />
+                <button type="button" class="btn btn-sm btn-dark opacity-75" 
+                        style="position: absolute; bottom: 20px; right: 5px; border-radius: 50%;"
+                        onclick="document.getElementById('photoInput').click()">
+                    <i class="bi bi-camera"></i>
+                </button>
+                <form id="photoForm" asp-action="UpdatePhoto" method="post" enctype="multipart/form-data" style="display:none;">
+                    <input type="file" id="photoInput" name="photo" accept="image/*" onchange="document.getElementById('photoForm').submit()" />
+                </form>
+            </div>
+            
+            <h3 class="profile-name">@Model.FullName</h3>
+            <div class="profile-role">
+                @Model.Designation?.Name<br>
+                @Model.Department?.Name
+            </div>
+            <div class="status-box">
+                At work for : @years y @months m @days d
+            </div>
+        </div>
+
+        <div class="section-header">
+            <i class="bi bi-eye"></i> Leave Status
+        </div>
+        <table class="table table-sm table-bordered text-center" style="font-size: 0.85rem; color: #555;">
+            <thead>
+                <tr style="background-color: #90A4AE; color: white;">
+                    <th>Leaves</th>
+                    <th>Used</th>
+                    <th>Balanced</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (leaveBalances != null)
+                {
+                    foreach (var balance in leaveBalances)
+                    {
+                        string leaveAlias = balance.LeaveType?.Code switch
+                        {
+                            "Earned" => "EL",
+                            "Sick" => "SL",
+                            "Casual" => "CL",
+                            "Unpaid" => "Unpaid",
+                            "WFH" => "WFH",
+                            _ => balance.LeaveType?.Name ?? "Unknown"
+                        };
+                        <tr>
+                            <td>@leaveAlias</td>
+                            <td>@balance.Used.ToString("G29")</td>
+                            <td>@balance.Balance.ToString("G29")</td>
+                            <td>@balance.Allocated.ToString("G29")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="section-header mt-4">
+            <i class="bi bi-gift"></i> Birthdays
+        </div>
+        @if (ViewBag.Birthdays != null && ((IEnumerable<HRMSystem.Models.Employee>)ViewBag.Birthdays).Any())
+        {
+            foreach (var bday in (IEnumerable<HRMSystem.Models.Employee>)ViewBag.Birthdays)
+            {
+                <div class="d-flex align-items-center p-2 border bg-white mb-2 shadow-sm">
+                    <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(bday.FullName)&background=random" class="rounded-circle me-3" width="45" />
+                    <div class="small">
+                        <strong>@bday.FullName</strong> has birthday on<br>
+                        <span class="text-primary fw-bold">@bday.DateOfBirth?.ToString("dd MMMM")</span>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-muted small p-2 border bg-white mb-2 shadow-sm">
+                No birthdays this month.
+            </div>
+        }
+    </div>
+
+    <!-- Middle Column: Details -->
+    <div class="col-lg-6">
+        <!-- Personal Details -->
+        <div class="profile-section-card shadow-sm">
+            <div class="profile-section-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person-fill me-2"></i> Personal Details</span>
+                <button type="button" class="btn btn-sm btn-link text-white text-decoration-none p-0 fw-bold" data-bs-toggle="modal" data-bs-target="#editPersonalDetailsModal">
+                    <i class="bi bi-pencil-square me-1"></i> Edit Info
+                </button>
+            </div>
+            <div class="profile-section-body">
+                <div class="profile-row">
+                    <div class="profile-label">Name</div>
+                    <div class="profile-value">@Model.FullName</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Father's Name</div>
+                    <div class="profile-value">@(string.IsNullOrEmpty(Model.FathersName) ? "N/A" : Model.FathersName)</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Date of Birth</div>
+                    <div class="profile-value">@(Model.DateOfBirth?.ToString("dd-MMM-yyyy") ?? "N/A")</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Gender</div>
+                    <div class="profile-value">@Model.Gender</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Email</div>
+                    <div class="profile-value">@Model.Email</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Phone</div>
+                    <div class="profile-value">@(string.IsNullOrEmpty(Model.Phone) ? "N/A" : Model.Phone)</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Local Address</div>
+                    <div class="profile-value">
+                        <span id="displayLocalAddress">@(string.IsNullOrEmpty(Model.LocalAddress) ? "N/A" : Model.LocalAddress)</span>
+                    </div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Permanent Address</div>
+                    <div class="profile-value">
+                        <span id="displayPermanentAddress">@(string.IsNullOrEmpty(Model.PermanentAddress) ? "N/A" : Model.PermanentAddress)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Company Details -->
+        <div class="profile-section-card shadow-sm">
+            <div class="profile-section-header">
+                <i class="bi bi-briefcase-fill me-2"></i> Company Details
+            </div>
+            <div class="profile-section-body">
+                <div class="profile-row">
+                    <div class="profile-label">Employee ID</div>
+                    <div class="profile-value">@Model.EmployeeCode</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Department</div>
+                    <div class="profile-value">@Model.Department?.Name</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Designation</div>
+                    <div class="profile-value">@Model.Designation?.Name</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Date of Joining</div>
+                    <div class="profile-value">@Model.DateOfJoining.ToString("dd-MMM-yyyy")</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bank Details -->
+        <div class="profile-section-card shadow-sm">
+            <div class="profile-section-header">
+                <i class="bi bi-bank me-2"></i> Bank Details
+            </div>
+            <div class="profile-section-body">
+                <div class="profile-row">
+                    <div class="profile-label">Account Holder Name</div>
+                    <div class="profile-value">@(bank?.AccountHolderName ?? "N/A")</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Account Number</div>
+                    <div class="profile-value">@(bank?.AccountNumber ?? "N/A")</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Bank Name</div>
+                    <div class="profile-value">@(bank?.BankName ?? "N/A")</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">BSB</div>
+                    <div class="profile-value">@(bank?.BSB ?? "N/A")</div>
+                </div>
+                <div class="profile-row">
+                    <div class="profile-label">Tax Payer Id</div>
+                    <div class="profile-value">@(bank?.TaxPayerId ?? "N/A")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Extras -->
+    <div class="col-lg-3">
+        <!-- Notice Board -->
+        <div class="profile-section-card shadow-sm">
+            <div class="profile-section-header">
+                <i class="bi bi-megaphone-fill me-2"></i> Notice Board
+            </div>
+            <div class="profile-section-body">
+                @if (ViewBag.Notices != null && ((IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices).Any())
+                {
+                    foreach (var notice in (IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices)
+                    {
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="notice-date me-3" style="flex-shrink: 0;">
+                                @notice.Date.ToString("dd")<br>@notice.Date.ToString("MM, yyyy")
+                            </div>
+                            <div class="small fw-bold text-muted mt-1" title="@notice.Content">@notice.Title</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted small">No announcements.</div>
+                }
+            </div>
+        </div>
+
+        <!-- Upcoming Holidays -->
+        <div class="profile-section-card shadow-sm">
+            <div class="profile-section-header">
+                <i class="bi bi-send-fill me-2"></i> Upcoming Holidays
+            </div>
+            <div class="profile-section-body p-2">
+                @if (ViewBag.Holidays != null && ((IEnumerable<HRMSystem.Models.Holiday>)ViewBag.Holidays).Any())
+                {
+                    foreach (var holiday in (IEnumerable<HRMSystem.Models.Holiday>)ViewBag.Holidays)
+                    {
+                        string textColor = holiday.Color switch
+                        {
+                            "#fffde7" => "text-warning",
+                            "#ffebee" => "text-danger",
+                            "#f1f8e9" => "text-success",
+                            _ => "text-muted"
+                        };
+                        <div class="holiday-item mb-2" style="background-color: @holiday.Color; padding: 10px; border-radius: 4px;">
+                            <div class="fw-bold @textColor">@holiday.Name</div>
+                            <div class="text-muted italic">@holiday.Date.ToString("dd MMM yyyy")</div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted small p-2">No upcoming holidays.</div>
+                }
+            </div>
+        </div>
+
+        <!-- Awards -->
+        <div class="profile-section-card shadow-sm">
+            <div class="profile-section-header">
+                <i class="bi bi-trophy-fill me-2"></i> Awards
+            </div>
+            <div class="profile-section-body text-center py-5">
+                <div class="text-muted small">No Award</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Personal Details Modal -->
+<div class="modal fade" id="editPersonalDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-0">
+            <form asp-action="UpdatePersonalDetails" method="post">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">Edit Personal Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Father's Name</label>
+                        <input type="text" class="form-control" name="fathersName" value="@Model.FathersName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Date of Birth</label>
+                        <input type="date" class="form-control" name="dateOfBirth" value="@(Model.DateOfBirth?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Gender</label>
+                        <select class="form-select" name="gender">
+                            @foreach (var genderVal in Enum.GetValues(typeof(HRMSystem.Models.Gender)))
+                            {
+                                if (Model.Gender == (HRMSystem.Models.Gender)genderVal)
+                                {
+                                    <option value="@genderVal" selected="selected">@genderVal</option>
+                                }
+                                else
+                                {
+                                    <option value="@genderVal">@genderVal</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phone</label>
+                        <input type="text" class="form-control" name="phone" value="@Model.Phone" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Local Address</label>
+                        <textarea class="form-control" name="localAddress" rows="3">@Model.LocalAddress</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Permanent Address</label>
+                        <textarea class="form-control" name="permanentAddress" rows="3">@Model.PermanentAddress</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary rounded-0" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-0">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -10,10 +10,12 @@ namespace HRMSystem.Controllers
     public class AttendanceController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public AttendanceController(ApplicationDbContext context)
+        public AttendanceController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         public class LocationClockModel
@@ -21,6 +23,35 @@ namespace HRMSystem.Controllers
             public double Latitude { get; set; }
             public double Longitude { get; set; }
             public string? LocationName { get; set; }
+            public string? PhotoBase64 { get; set; }
+        }
+
+        private async Task<string?> SaveBase64ImageAsync(string? base64Data, string prefix, int employeeId)
+        {
+            if (string.IsNullOrWhiteSpace(base64Data)) return null;
+
+            try
+            {
+                var dataParts = base64Data.Split(',');
+                var cleanBase64 = dataParts.Length > 1 ? dataParts[1] : dataParts[0];
+                cleanBase64 = cleanBase64.Trim().Replace(" ", "+");
+                var imageBytes = Convert.FromBase64String(cleanBase64);
+
+                var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+                var uploadsDir = Path.Combine(webRoot, "uploads", "attendance");
+                if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
+
+                var fileName = $"{prefix}_{employeeId}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 6)}.jpg";
+                var filePath = Path.Combine(uploadsDir, fileName);
+
+                await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+                return $"/uploads/attendance/{fileName}";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AttendanceController] Failed to save selfie image: {ex.Message}");
+                return null;
+            }
         }
 
         [AuthorizeRole("Employee")]
@@ -105,6 +136,19 @@ namespace HRMSystem.Controllers
                 });
             }
 
+            // Validate Selfie Photo
+            if (string.IsNullOrWhiteSpace(model.PhotoBase64))
+            {
+                return Json(new
+                {
+                    success = false,
+                    isPhotoError = true,
+                    message = "Photo Verification Required!\n\nYou must capture a live selfie to Clock In to prevent proxy attendance."
+                });
+            }
+
+            var photoPath = await SaveBase64ImageAsync(model.PhotoBase64, "clockin", empId);
+
             // Save Clock-In
             if (todayRecord == null)
             {
@@ -116,6 +160,7 @@ namespace HRMSystem.Controllers
                     ClockInLatitude = model.Latitude,
                     ClockInLongitude = model.Longitude,
                     ClockInLocationName = matchedLocation?.Name ?? model.LocationName ?? "Verified Location",
+                    ClockInPhotoPath = photoPath,
                     IsLocationVerified = true,
                     Status = "Clocked In",
                     CreatedAt = DateTime.Now,
@@ -129,6 +174,7 @@ namespace HRMSystem.Controllers
                 todayRecord.ClockInLatitude = model.Latitude;
                 todayRecord.ClockInLongitude = model.Longitude;
                 todayRecord.ClockInLocationName = matchedLocation?.Name ?? model.LocationName ?? "Verified Location";
+                todayRecord.ClockInPhotoPath = photoPath;
                 todayRecord.IsLocationVerified = true;
                 todayRecord.Status = "Clocked In";
                 todayRecord.UpdatedAt = DateTime.Now;
@@ -142,7 +188,8 @@ namespace HRMSystem.Controllers
                 success = true,
                 message = $"Clocked In successfully at {todayRecord.ClockInTime.Value:hh:mm tt} ({todayRecord.ClockInLocationName}).",
                 clockInTime = todayRecord.ClockInTime.Value.ToString("hh:mm tt"),
-                location = todayRecord.ClockInLocationName
+                location = todayRecord.ClockInLocationName,
+                photoUrl = todayRecord.ClockInPhotoPath
             });
         }
 
@@ -217,6 +264,15 @@ namespace HRMSystem.Controllers
             todayRecord.ClockOutLatitude = model.Latitude;
             todayRecord.ClockOutLongitude = model.Longitude;
             todayRecord.ClockOutLocationName = matchedLocation?.Name ?? model.LocationName ?? "Verified Location";
+
+            if (!string.IsNullOrWhiteSpace(model.PhotoBase64))
+            {
+                var outPhotoPath = await SaveBase64ImageAsync(model.PhotoBase64, "clockout", empId);
+                if (!string.IsNullOrEmpty(outPhotoPath))
+                {
+                    todayRecord.ClockOutPhotoPath = outPhotoPath;
+                }
+            }
             
             var duration = (todayRecord.ClockOutTime.Value - todayRecord.ClockInTime.Value).TotalMinutes;
             todayRecord.WorkDurationMinutes = Math.Max(0, duration);

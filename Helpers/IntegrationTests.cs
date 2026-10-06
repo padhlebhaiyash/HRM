@@ -353,7 +353,7 @@ namespace HRMSystem.Helpers
             {
                 var emailService = sp.GetRequiredService<Services.EmailService>();
                 var config = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
-                var testEmail = config["EmailSettings:FromEmail"] ?? "padhlebhaiyash@gmail.com";
+                var testEmail = config["EmailSettings:FromEmail"] ?? "techinovexasolutions@gmail.com";
                 
                 Console.WriteLine($"Attempting to send a test email to: {testEmail}...");
                 await emailService.SendWelcomeAndSetupEmailAsync(

@@ -154,14 +154,14 @@
                     <!-- Action Buttons -->
                     <div class="col-md-6">
                         <div class="d-flex gap-2">
-                            <button id="btnClockIn" type="button" class="btn btn-success btn-lg w-50 py-3 shadow-sm rounded-3 fw-bold d-flex flex-column align-items-center justify-content-center @(isClockedIn ? "disabled opacity-50" : "")" onclick="performClockIn()">
+                            <button id="btnClockIn" type="button" class="btn btn-success btn-lg w-50 py-3 shadow-sm rounded-3 fw-bold d-flex flex-column align-items-center justify-content-center @(isClockedIn ? "disabled opacity-50" : "")" onclick="initiateClockAction('clockin')">
                                 <span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span>
-                                <span class="fw-normal" style="font-size:0.75rem;">Require GPS Location</span>
+                                <span class="fw-normal" style="font-size:0.75rem;"><i class="bi bi-camera-fill me-1"></i>Selfie + GPS Verified</span>
                             </button>
                             
-                            <button id="btnClockOut" type="button" class="btn btn-danger btn-lg w-50 py-3 shadow-sm rounded-3 fw-bold d-flex flex-column align-items-center justify-content-center @(!isClockedIn || isClockedOut ? "disabled opacity-50" : "")" onclick="performClockOut()">
+                            <button id="btnClockOut" type="button" class="btn btn-danger btn-lg w-50 py-3 shadow-sm rounded-3 fw-bold d-flex flex-column align-items-center justify-content-center @(!isClockedIn || isClockedOut ? "disabled opacity-50" : "")" onclick="initiateClockAction('clockout')">
                                 <span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span>
-                                <span class="fw-normal" style="font-size:0.75rem;">Require GPS Location</span>
+                                <span class="fw-normal" style="font-size:0.75rem;"><i class="bi bi-camera-fill me-1"></i>Selfie + GPS Verified</span>
                             </button>
                         </div>
                     </div>
@@ -269,6 +269,71 @@
     </div>
 </div>
 
+<!-- Attendance Selfie Verification Modal -->
+<div class="modal fade" id="attendanceCameraModal" tabindex="-1" aria-labelledby="attendanceCameraModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header text-white" id="cameraModalHeader" style="background: linear-gradient(135deg, #198754, #157347);">
+                <h5 class="modal-title fw-bold" id="attendanceCameraModalLabel">
+                    <i class="bi bi-camera-fill me-2"></i>Live Selfie Verification
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="closeAttendanceCamera()"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div id="cameraInstructionText" class="text-muted small mb-3">
+                    Position your face inside the frame to verify identity and prevent proxy clock-ins.
+                </div>
+
+                <!-- Camera / Snapshot Preview Container -->
+                <div class="position-relative mx-auto mb-3" style="width: 280px; height: 280px; max-width: 100%;">
+                    <!-- Live Video Element -->
+                    <video id="attendanceVideo" autoplay playsinline muted class="w-100 h-100 rounded-circle border border-4 border-success shadow-sm" style="object-fit: cover; transform: scaleX(-1); background: #111;"></video>
+                    
+                    <!-- Captured Snapshot Image -->
+                    <img id="attendanceSnapshotImg" class="w-100 h-100 rounded-circle border border-4 border-success shadow-sm d-none" style="object-fit: cover; transform: scaleX(-1);" alt="Selfie preview" />
+                    
+                    <!-- Hidden Canvas for frame capture -->
+                    <canvas id="attendanceCanvas" class="d-none" width="480" height="480"></canvas>
+
+                    <!-- Face oval overlay guide lines -->
+                    <div id="cameraOverlayGuide" class="position-absolute top-50 start-50 translate-middle rounded-circle border border-2 border-white opacity-50" style="width: 78%; height: 78%; pointer-events: none;"></div>
+
+                    <!-- Processing overlay spinner -->
+                    <div id="cameraProcessingOverlay" class="position-absolute top-0 start-0 w-100 h-100 rounded-circle bg-dark bg-opacity-75 d-flex flex-column align-items-center justify-content-center text-white d-none">
+                        <div class="spinner-border text-light mb-2" role="status"></div>
+                        <span id="cameraProcessingText" class="small fw-bold">Submitting attendance...</span>
+                    </div>
+                </div>
+
+                <!-- Error alert box if camera permission denied -->
+                <div id="cameraErrorAlert" class="alert alert-danger d-none small py-2 text-start">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <span id="cameraErrorMessage">Unable to access camera. Please allow camera permissions.</span>
+                </div>
+
+                <!-- GPS Status chip -->
+                <div class="d-inline-flex align-items-center gap-1 px-3 py-1 bg-light rounded-pill border small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger"></i>
+                    <span id="cameraGpsStatus">Acquiring GPS coordinates...</span>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top d-flex justify-content-between p-3">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal" onclick="closeAttendanceCamera()">
+                    Cancel
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" id="btnRetakePhoto" class="btn btn-secondary rounded-pill px-3 d-none" onclick="retakeSelfie()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Retake
+                    </button>
+                    <button type="button" id="btnCaptureSubmit" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="captureAndSubmitAttendance()">
+                        <i class="bi bi-camera-fill me-1"></i> <span id="btnCaptureSubmitText">Capture & Clock In</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         // Live Clock
@@ -355,94 +420,223 @@
             checkUserLocationStatus();
         });
 
-        function performClockIn() {
-            if (!navigator.geolocation) {
-                showAlert('danger', 'Geolocation is not supported by your browser.');
-                return;
+        let attendanceCameraStream = null;
+        let attendanceActionType = 'clockin'; // 'clockin' or 'clockout'
+        let cachedGpsCoords = null;
+        let attendanceModalInstance = null;
+
+        function initiateClockAction(actionType) {
+            attendanceActionType = actionType;
+            cachedGpsCoords = null;
+
+            // Update modal UI based on Clock In vs Clock Out
+            if (actionType === 'clockin') {
+                $('#cameraModalHeader').css('background', 'linear-gradient(135deg, #198754, #157347)');
+                $('#attendanceCameraModalLabel').html('<i class="bi bi-camera-fill me-2"></i>Clock In Face Verification');
+                $('#btnCaptureSubmit').removeClass('btn-danger').addClass('btn-success');
+                $('#btnCaptureSubmitText').text('Capture & Clock In');
+            } else {
+                $('#cameraModalHeader').css('background', 'linear-gradient(135deg, #dc3545, #b02a37)');
+                $('#attendanceCameraModalLabel').html('<i class="bi bi-camera-fill me-2"></i>Clock Out Face Verification');
+                $('#btnCaptureSubmit').removeClass('btn-success').addClass('btn-danger');
+                $('#btnCaptureSubmitText').text('Capture & Clock Out');
             }
 
-            $('#btnClockIn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm mb-1"></span> Locating...');
+            // Reset visual states
+            $('#cameraProcessingOverlay').addClass('d-none');
+            $('#attendanceSnapshotImg').addClass('d-none');
+            $('#attendanceVideo').removeClass('d-none');
+            $('#btnRetakePhoto').addClass('d-none');
+            $('#btnCaptureSubmit').prop('disabled', true);
+            $('#cameraErrorAlert').addClass('d-none');
 
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
+            // Open bootstrap modal
+            if (!attendanceModalInstance) {
+                attendanceModalInstance = new bootstrap.Modal(document.getElementById('attendanceCameraModal'));
+            }
+            attendanceModalInstance.show();
 
-                    $.ajax({
-                        url: '/Attendance/ClockIn',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ latitude: lat, longitude: lng }),
-                        success: function(res) {
-                            if (res.success) {
-                                showAlert('success', res.message);
-                                $('#summaryClockInTime').text(res.clockInTime);
-                                $('#summaryStatusBadge').html('<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Clocked In (Active)</span>');
-                                $('#btnClockIn').addClass('disabled opacity-50').html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                                $('#btnClockOut').removeClass('disabled opacity-50').prop('disabled', false);
-                                checkUserLocationStatus();
-                            } else {
-                                showAlert('danger', res.message);
-                                $('#btnClockIn').prop('disabled', false).html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                            }
-                        },
-                        error: function() {
-                            showAlert('danger', 'An error occurred while attempting to clock in.');
-                            $('#btnClockIn').prop('disabled', false).html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                        }
-                    });
-                },
-                function(err) {
-                    showAlert('danger', 'Location access denied or unavailable. Please enable browser location permissions to Clock In.');
-                    $('#btnClockIn').prop('disabled', false).html('<span><i class="bi bi-box-arrow-in-right me-1"></i> CLOCK IN</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
+            // 1. Acquire GPS in parallel
+            $('#cameraGpsStatus').html('<span class="spinner-border spinner-border-sm me-1"></span>Acquiring GPS perimeter...');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        cachedGpsCoords = {
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude
+                        };
+                        $('#cameraGpsStatus').html('<i class="bi bi-check-circle-fill text-success me-1"></i>GPS Location Locked');
+                    },
+                    function(err) {
+                        $('#cameraGpsStatus').html('<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>GPS Permission Denied/Unavailable');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                $('#cameraGpsStatus').html('<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>GPS Not Supported');
+            }
+
+            // 2. Start Camera
+            startAttendanceCamera();
         }
 
-        function performClockOut() {
-            if (!navigator.geolocation) {
-                showAlert('danger', 'Geolocation is not supported by your browser.');
+        function startAttendanceCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                $('#cameraErrorAlert').removeClass('d-none');
+                $('#cameraErrorMessage').text('Camera access is not supported by your browser.');
+                $('#btnCaptureSubmit').prop('disabled', true);
                 return;
             }
 
-            $('#btnClockOut').prop('disabled', true).html('<span class="spinner-border spinner-border-sm mb-1"></span> Locating...');
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
+                audio: false
+            }).then(function(stream) {
+                attendanceCameraStream = stream;
+                const video = document.getElementById('attendanceVideo');
+                video.srcObject = stream;
+                video.play();
+                $('#btnCaptureSubmit').prop('disabled', false);
+                $('#cameraErrorAlert').addClass('d-none');
+            }).catch(function(err) {
+                console.error("Camera access error:", err);
+                $('#cameraErrorAlert').removeClass('d-none');
+                $('#cameraErrorMessage').text('Camera permission was denied or unavailable. A live face selfie is mandatory to prevent proxy attendance.');
+                $('#btnCaptureSubmit').prop('disabled', true);
+            });
+        }
 
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
+        function closeAttendanceCamera() {
+            stopAttendanceCamera();
+            if (attendanceModalInstance) {
+                attendanceModalInstance.hide();
+            }
+        }
 
-                    $.ajax({
-                        url: '/Attendance/ClockOut',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ latitude: lat, longitude: lng }),
-                        success: function(res) {
-                            if (res.success) {
-                                showAlert('success', res.message);
-                                $('#summaryClockOutTime').text(res.clockOutTime);
-                                $('#summaryWorkDuration').text(res.duration);
-                                $('#summaryStatusBadge').html('<span class="badge bg-primary"><i class="bi bi-flag-fill me-1"></i>Shift Completed</span>');
-                                $('#btnClockOut').addClass('disabled opacity-50').html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                                checkUserLocationStatus();
-                            } else {
-                                showAlert('danger', res.message);
-                                $('#btnClockOut').prop('disabled', false).html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                            }
-                        },
-                        error: function() {
-                            showAlert('danger', 'An error occurred while attempting to clock out.');
-                            $('#btnClockOut').prop('disabled', false).html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
+        function stopAttendanceCamera() {
+            if (attendanceCameraStream) {
+                attendanceCameraStream.getTracks().forEach(function(track) {
+                    track.stop();
+                });
+                attendanceCameraStream = null;
+            }
+            const video = document.getElementById('attendanceVideo');
+            if (video) video.srcObject = null;
+        }
+
+        function retakeSelfie() {
+            $('#attendanceSnapshotImg').addClass('d-none');
+            $('#attendanceVideo').removeClass('d-none');
+            $('#btnRetakePhoto').addClass('d-none');
+            $('#btnCaptureSubmit').prop('disabled', false);
+            $('#cameraProcessingOverlay').addClass('d-none');
+            startAttendanceCamera();
+        }
+
+        function captureAndSubmitAttendance() {
+            const video = document.getElementById('attendanceVideo');
+            const canvas = document.getElementById('attendanceCanvas');
+
+            if (!video || !attendanceCameraStream) {
+                showAlert('danger', 'Camera stream is not active. Please allow camera permissions.');
+                return;
+            }
+
+            // Draw current video frame to canvas
+            const width = video.videoWidth || 480;
+            const height = video.videoHeight || 480;
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            // Mirror image horizontally to match what user saw in the preview
+            ctx.save();
+            ctx.translate(width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, width, height);
+            ctx.restore();
+
+            const photoBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            // Freeze UI with snapshot preview
+            $('#attendanceSnapshotImg').attr('src', photoBase64).removeClass('d-none');
+            $('#attendanceVideo').addClass('d-none');
+            $('#cameraProcessingOverlay').removeClass('d-none');
+            $('#cameraProcessingText').text('Verifying location & face...');
+            $('#btnCaptureSubmit').prop('disabled', true);
+            $('#btnRetakePhoto').addClass('d-none');
+
+            // Stop camera tracks now that we have the photo
+            stopAttendanceCamera();
+
+            // Ensure GPS is ready
+            if (cachedGpsCoords) {
+                sendAttendanceRequest(cachedGpsCoords.latitude, cachedGpsCoords.longitude, photoBase64);
+            } else {
+                if (!navigator.geolocation) {
+                    finishSubmissionError('Geolocation is not supported by your browser.');
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        sendAttendanceRequest(pos.coords.latitude, pos.coords.longitude, photoBase64);
+                    },
+                    function(err) {
+                        finishSubmissionError('Location access was denied or unavailable. Please enable GPS permissions to verify your location.');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
+        }
+
+        function sendAttendanceRequest(lat, lng, photoBase64) {
+            const url = attendanceActionType === 'clockin' ? '/Attendance/ClockIn' : '/Attendance/ClockOut';
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    latitude: lat,
+                    longitude: lng,
+                    photoBase64: photoBase64
+                }),
+                success: function(res) {
+                    closeAttendanceCamera();
+                    if (res.success) {
+                        showAlert('success', res.message);
+                        if (attendanceActionType === 'clockin') {
+                            $('#summaryClockInTime').text(res.clockInTime);
+                            $('#summaryStatusBadge').html('<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Clocked In (Active)</span>');
+                            $('#btnClockIn').addClass('disabled opacity-50');
+                            $('#btnClockOut').removeClass('disabled opacity-50').prop('disabled', false);
+                        } else {
+                            $('#summaryClockOutTime').text(res.clockOutTime);
+                            $('#summaryWorkDuration').text(res.duration);
+                            $('#summaryStatusBadge').html('<span class="badge bg-primary"><i class="bi bi-flag-fill me-1"></i>Shift Completed</span>');
+                            $('#btnClockOut').addClass('disabled opacity-50');
                         }
-                    });
+                        checkUserLocationStatus();
+                    } else {
+                        showAlert('danger', res.message);
+                    }
                 },
-                function(err) {
-                    showAlert('danger', 'Location access denied or unavailable. Please enable browser location permissions to Clock Out.');
-                    $('#btnClockOut').prop('disabled', false).html('<span><i class="bi bi-box-arrow-left me-1"></i> CLOCK OUT</span><span style="font-size:0.75rem;">Require GPS Location</span>');
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
+                error: function() {
+                    closeAttendanceCamera();
+                    showAlert('danger', 'An error occurred while submitting attendance. Please try again.');
+                }
+            });
+        }
+
+        function finishSubmissionError(msg) {
+            $('#cameraProcessingOverlay').addClass('d-none');
+            $('#btnRetakePhoto').removeClass('d-none');
+            $('#cameraErrorAlert').removeClass('d-none');
+            $('#cameraErrorMessage').text(msg);
         }
 
         function showAlert(type, text) {

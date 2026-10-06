@@ -1,0 +1,422 @@
+@model HRMSystem.Models.TotalLeavesViewModel
+@{
+    Layout = "_EmployeeDashboardLayout";
+    ViewData["Title"] = "Total Leaves Overview";
+    ViewData["ActivePage"] = "Admin";
+
+    var months = new Dictionary<int, string>
+    {
+        { 1, "Jan" }, { 2, "Feb" }, { 3, "Mar" }, { 4, "Apr" },
+        { 5, "May" }, { 6, "Jun" }, { 7, "Jul" }, { 8, "Aug" },
+        { 9, "Sep" }, { 10, "Oct" }, { 11, "Nov" }, { 12, "Dec" }
+    };
+}
+
+<style>
+    /* Filter Bar Styling */
+    .filter-section {
+        background-color: #fdfdfd;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 14px 18px;
+        margin-bottom: 18px;
+    }
+
+    .filter-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #495057;
+        margin-bottom: 5px;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .filter-control {
+        font-size: 0.85rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        height: 36px;
+        color: #333;
+    }
+
+    .filter-control:focus {
+        border-color: #00b4d8;
+        box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+    }
+
+    .btn-search-cyan {
+        background-color: #00b4d8;
+        border-color: #00b4d8;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        height: 36px;
+        padding: 0 22px;
+        border-radius: 4px;
+        transition: all 0.15s ease-in-out;
+    }
+
+    .btn-search-cyan:hover {
+        background-color: #0096c7;
+        border-color: #0096c7;
+        color: #ffffff;
+    }
+
+    /* Grid Table Alignment & 2-Tier Pastel Headers */
+    .leave-grid-wrapper {
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
+        background-color: #ffffff;
+        overflow: hidden;
+    }
+
+    .leave-grid-table {
+        margin-bottom: 0;
+        font-size: 0.82rem;
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+
+    .leave-grid-table th, 
+    .leave-grid-table td {
+        border: 1px solid #cbd5e1;
+        padding: 7px 9px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    /* Tier 1 Header */
+    .th-cat-header {
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-align: center;
+        padding: 9px !important;
+        letter-spacing: 0.2px;
+    }
+
+    /* Tier 2 Sub-Header */
+    .th-sub-header {
+        font-size: 0.77rem;
+        font-weight: 600;
+        color: #334155;
+        background-color: #f8fafc;
+        text-align: center;
+        padding: 6px 4px !important;
+    }
+
+    .th-sub-header.emp-col {
+        text-align: left;
+        padding-left: 12px !important;
+    }
+
+    /* Data Cell Alignments */
+    .cell-num {
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cell-used {
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .cell-used.is-zero {
+        font-weight: 600;
+        color: #2563eb;
+    }
+
+    .cell-balance {
+        color: #475569;
+    }
+
+    .cell-total {
+        color: #334155;
+    }
+
+    .cell-emp-id {
+        font-weight: 600;
+        color: #334155;
+        padding-left: 12px !important;
+    }
+
+    .cell-emp-name {
+        font-weight: 600;
+        color: #0f172a;
+        padding-left: 12px !important;
+    }
+
+    /* Category group right border separator */
+    .group-sep {
+        border-right: 2px solid #64748b !important;
+    }
+
+    /* Row hover effect */
+    .leave-grid-table tbody tr:hover td {
+        background-color: #f8fafc;
+    }
+
+    /* All Together styling */
+    .all-together-col {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+
+    /* Table Footer Summary */
+    .leave-grid-table tfoot tr td {
+        font-weight: 700;
+        background-color: #f1f5f9;
+        border-top: 2px solid #64748b;
+    }
+</style>
+
+<div class="row" id="overviewLayoutRow">
+    <!-- Left Sidebar: Aligned with other Admin overviews -->
+    <div class="col-lg-3 col-md-4 mb-4" id="overviewSidebar">
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
+            <div class="profile-img-container mb-3">
+                <i class="bi bi-grid-3x3-gap-fill display-1 text-primary opacity-25"></i>
+            </div>
+            <h3 class="profile-name">Total Leaves</h3>
+            <div class="profile-role">
+                Leave Consumption Grid
+            </div>
+            <div class="status-box">
+                Admin Overview
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-4">
+            <a asp-action="DownloadTotalLeavesExcel"
+               asp-route-employeeId="@Model.SelectedEmployeeId"
+               asp-route-month="@Model.SelectedMonth"
+               asp-route-year="@Model.SelectedYear"
+               class="btn btn-sm btn-success rounded-pill fw-bold">
+                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel
+            </a>
+
+            <button type="button" class="btn btn-sm btn-outline-info rounded-pill fw-bold" onclick="toggleFullWidthView()">
+                <i class="bi bi-arrows-angle-expand me-1"></i> <span id="expandBtnText">Expand Full Width</span>
+            </button>
+
+            <a asp-controller="LeaveBalance" asp-action="Index" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                <i class="bi bi-wallet2 me-1"></i> Leave Balances
+            </a>
+
+            <a asp-controller="Leave" asp-action="Index" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                <i class="bi bi-envelope-paper me-1"></i> Leave Requests
+            </a>
+
+            <a asp-controller="Admin" asp-action="Dashboard" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold">
+                <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Content Area: Aligned with other Admin overviews -->
+    <div class="col-lg-9 col-md-8" id="overviewContent">
+        <div class="main-content-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-grid-3x3-gap"></i> Total Leaves Overview</span>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold" onclick="toggleFullWidthView()">
+                    <i class="bi bi-arrows-angle-expand me-1"></i> Toggle Width
+                </button>
+                <a asp-action="DownloadTotalLeavesExcel"
+                   asp-route-employeeId="@Model.SelectedEmployeeId"
+                   asp-route-month="@Model.SelectedMonth"
+                   asp-route-year="@Model.SelectedYear"
+                   class="btn btn-sm btn-success rounded-pill fw-bold">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+                </a>
+            </div>
+        </div>
+
+        <div class="main-content-body shadow-sm bg-white p-3">
+            <!-- Filter Section matching screenshot -->
+            <div class="filter-section">
+                <form method="get" asp-action="TotalLeaves" class="row g-2 align-items-end">
+                    <!-- Employee Name Filter -->
+                    <div class="col-md-4 col-sm-6">
+                        <label class="filter-label">Employee Name</label>
+                        <select name="employeeId" class="form-select filter-control">
+                            <option value="">All</option>
+                            @foreach (var opt in Model.EmployeeOptions)
+                            {
+                                <option value="@opt.Id" selected="@(Model.SelectedEmployeeId == opt.Id ? "selected" : null)">
+                                    @opt.Code - @opt.Name
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Select Month Filter -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="filter-label">Select Month</label>
+                        <select name="month" class="form-select filter-control">
+                            <option value="">All</option>
+                            @foreach (var m in months)
+                            {
+                                <option value="@m.Key" selected="@(Model.SelectedMonth == m.Key ? "selected" : null)">
+                                    @m.Value
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Select Year Filter -->
+                    <div class="col-md-3 col-sm-6">
+                        <label class="filter-label">Select Year</label>
+                        <select name="year" class="form-select filter-control">
+                            @foreach (var yr in Model.AvailableYears)
+                            {
+                                <option value="@yr" selected="@(Model.SelectedYear == yr ? "selected" : null)">
+                                    @yr
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Search Button -->
+                    <div class="col-md-2 col-sm-6">
+                        <button type="submit" class="btn btn-search-cyan w-100">
+                            Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table Matrix Grid with 2-Tier Pastel Headers -->
+            <div class="leave-grid-wrapper">
+                <div class="table-responsive">
+                    <table class="leave-grid-table">
+                        <thead>
+                            <!-- Tier 1 Header: Category Groups with pastel colors -->
+                            <tr>
+                                <th colspan="2" class="th-cat-header group-sep" style="background-color: #f1f5f9; color: #1e293b;">
+                                    Employee
+                                </th>
+                                @foreach (var lt in Model.LeaveTypes)
+                                {
+                                    <th colspan="3" class="th-cat-header group-sep" style="background-color: @lt.BgColor; color: @lt.TextColor;">
+                                        @lt.Name
+                                    </th>
+                                }
+                                <th colspan="3" class="th-cat-header all-together-col">
+                                    All together
+                                </th>
+                            </tr>
+
+                            <!-- Tier 2 Header: Emp id, Name, and Used / Balance / Total triplets -->
+                            <tr>
+                                <th class="th-sub-header emp-col" style="min-width: 85px;">Emp id</th>
+                                <th class="th-sub-header emp-col group-sep" style="min-width: 160px;">Name</th>
+
+                                @foreach (var lt in Model.LeaveTypes)
+                                {
+                                    <th class="th-sub-header" style="min-width: 55px;">Used</th>
+                                    <th class="th-sub-header" style="min-width: 55px;">Balance</th>
+                                    <th class="th-sub-header group-sep" style="min-width: 55px;">Total</th>
+                                }
+
+                                <th class="th-sub-header all-together-col" style="min-width: 60px;">Used</th>
+                                <th class="th-sub-header all-together-col" style="min-width: 60px;">Balance</th>
+                                <th class="th-sub-header all-together-col" style="min-width: 60px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.EmployeeRows != null && Model.EmployeeRows.Any())
+                            {
+                                @foreach (var row in Model.EmployeeRows)
+                                {
+                                    <tr>
+                                        <!-- Employee ID & Name -->
+                                        <td class="cell-emp-id">@row.EmployeeCode</td>
+                                        <td class="cell-emp-name group-sep">@row.EmployeeName</td>
+
+                                        <!-- Per-Leave-Type Values -->
+                                        @foreach (var lt in Model.LeaveTypes)
+                                        {
+                                            var cell = row.LeavesByType.ContainsKey(lt.Id) ? row.LeavesByType[lt.Id] : new HRMSystem.Models.LeaveCell();
+
+                                            <td class="cell-num cell-used @(cell.Used == 0 ? "is-zero" : "")">
+                                                @cell.Used.ToString("0.##")
+                                            </td>
+                                            <td class="cell-num cell-balance">
+                                                @cell.Balance.ToString("0.##")
+                                            </td>
+                                            <td class="cell-num cell-total group-sep">
+                                                @cell.Total.ToString("0.##")
+                                            </td>
+                                        }
+
+                                        <!-- All together summary cells -->
+                                        <td class="cell-num cell-used all-together-col">
+                                            @row.TotalUsed.ToString("0.##")
+                                        </td>
+                                        <td class="cell-num cell-balance all-together-col">
+                                            @row.TotalBalance.ToString("0.##")
+                                        </td>
+                                        <td class="cell-num cell-total all-together-col fw-bold">
+                                            @row.TotalAllocated.ToString("0.##")
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="@(2 + (Model.LeaveTypes.Count * 3) + 3)" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox fs-3 d-block mb-1"></i>
+                                        No employee records found for the selected filter.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+
+                        @if (Model.EmployeeRows != null && Model.EmployeeRows.Any())
+                        {
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2" class="group-sep text-end pe-3 fw-bold">
+                                        Total
+                                    </td>
+                                    @foreach (var lt in Model.LeaveTypes)
+                                    {
+                                        var cell = Model.TypeTotals.ContainsKey(lt.Id) ? Model.TypeTotals[lt.Id] : new HRMSystem.Models.LeaveCell();
+                                        <td class="cell-num cell-used">@cell.Used.ToString("0.##")</td>
+                                        <td class="cell-num cell-balance">@cell.Balance.ToString("0.##")</td>
+                                        <td class="cell-num cell-total group-sep">@cell.Total.ToString("0.##")</td>
+                                    }
+                                    <td class="cell-num cell-used all-together-col">@Model.GrandUsed.ToString("0.##")</td>
+                                    <td class="cell-num cell-balance all-together-col">@Model.GrandBalance.ToString("0.##")</td>
+                                    <td class="cell-num cell-total all-together-col">@Model.GrandTotal.ToString("0.##")</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleFullWidthView() {
+            var sidebar = document.getElementById('overviewSidebar');
+            var content = document.getElementById('overviewContent');
+            var btnText = document.getElementById('expandBtnText');
+
+            if (sidebar.style.display === 'none') {
+                sidebar.style.display = 'block';
+                content.className = 'col-lg-9 col-md-8';
+                if (btnText) btnText.innerText = 'Expand Full Width';
+            } else {
+                sidebar.style.display = 'none';
+                content.className = 'col-12';
+                if (btnText) btnText.innerText = 'Standard View';
+            }
+        }
+    </script>
+}

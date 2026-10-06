@@ -40,4 +40,6 @@ scratch/
 test_*.py
 __pycache__/
 *.pyc
+App_Data/
+*.csv
 

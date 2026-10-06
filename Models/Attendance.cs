@@ -33,6 +33,12 @@ namespace HRMSystem.Models
         [StringLength(200)]
         public string? ClockOutLocationName { get; set; }
 
+        [StringLength(300)]
+        public string? ClockInPhotoPath { get; set; }
+
+        [StringLength(300)]
+        public string? ClockOutPhotoPath { get; set; }
+
         [StringLength(50)]
         public string Status { get; set; } = "Present"; // Present, Late, Clocked In, Completed, HalfDay
 

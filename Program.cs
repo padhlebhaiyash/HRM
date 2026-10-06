@@ -1,10 +1,20 @@
 using HRMSystem.Data;
 using HRMSystem.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure DataProtection keys directory
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
+if (!Directory.Exists(keysFolder))
+{
+    Directory.CreateDirectory(keysFolder);
+}
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -29,7 +39,7 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(60);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 builder.Services.AddHttpContextAccessor();
 
@@ -38,6 +48,7 @@ builder.Services.AddAuthentication("Cookies")
     {
         options.LoginPath = "/Auth/Login";
         options.AccessDeniedPath = "/Auth/Login";
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
 // Configure Forwarded Headers for Azure App Service & reverse proxies
@@ -57,9 +68,28 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
+// Ensure upload directories exist
+var webRoot = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var uploadDirs = new[]
+{
+    Path.Combine(webRoot, "uploads", "attendance"),
+    Path.Combine(webRoot, "img", "profiles"),
+    Path.Combine(webRoot, "img", "logos")
+};
+foreach (var dir in uploadDirs)
+{
+    if (!Directory.Exists(dir))
+    {
+        Directory.CreateDirectory(dir);
+    }
+}
+
+// Serve physical static files dynamically from wwwroot (vital for uploads)
+app.UseStaticFiles();
+
 app.UseRouting();
 
 app.UseSession();

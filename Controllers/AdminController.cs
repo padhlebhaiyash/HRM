@@ -374,5 +374,241 @@ namespace HRMSystem.Controllers
 
             return RedirectToAction(nameof(CustomizePortal));
         }
+
+        public async Task<IActionResult> TotalLeaves(int? employeeId, int? month, int? year)
+        {
+            var vm = await BuildTotalLeavesViewModelAsync(employeeId, month, year);
+            return View(vm);
+        }
+
+        public async Task<IActionResult> DownloadTotalLeavesExcel(int? employeeId, int? month, int? year)
+        {
+            var vm = await BuildTotalLeavesViewModelAsync(employeeId, month, year);
+
+            var sb = new System.Text.StringBuilder();
+            // UTF-8 BOM so Excel opens with proper encoding
+            sb.Append('\uFEFF');
+
+            // Header 1: Category Groups
+            var header1 = new List<string> { "Employee", "" };
+            foreach (var lt in vm.LeaveTypes)
+            {
+                header1.Add(lt.Name);
+                header1.Add("");
+                header1.Add("");
+            }
+            header1.Add("All together");
+            header1.Add("");
+            header1.Add("");
+            sb.AppendLine(string.Join(",", header1.Select(EscapeCsv)));
+
+            // Header 2: Sub-columns
+            var header2 = new List<string> { "Emp id", "Name" };
+            foreach (var lt in vm.LeaveTypes)
+            {
+                header2.Add("Used");
+                header2.Add("Balance");
+                header2.Add("Total");
+            }
+            header2.Add("Used");
+            header2.Add("Balance");
+            header2.Add("Total");
+            sb.AppendLine(string.Join(",", header2.Select(EscapeCsv)));
+
+            // Data Rows
+            foreach (var row in vm.EmployeeRows)
+            {
+                var line = new List<string> { row.EmployeeCode, row.EmployeeName };
+                foreach (var lt in vm.LeaveTypes)
+                {
+                    var cell = row.LeavesByType.ContainsKey(lt.Id) ? row.LeavesByType[lt.Id] : new LeaveCell();
+                    line.Add(cell.Used.ToString("0.##"));
+                    line.Add(cell.Balance.ToString("0.##"));
+                    line.Add(cell.Total.ToString("0.##"));
+                }
+                line.Add(row.TotalUsed.ToString("0.##"));
+                line.Add(row.TotalBalance.ToString("0.##"));
+                line.Add(row.TotalAllocated.ToString("0.##"));
+                sb.AppendLine(string.Join(",", line.Select(EscapeCsv)));
+            }
+
+            // Total summary row
+            var totalLine = new List<string> { "Total", "" };
+            foreach (var lt in vm.LeaveTypes)
+            {
+                var cell = vm.TypeTotals.ContainsKey(lt.Id) ? vm.TypeTotals[lt.Id] : new LeaveCell();
+                totalLine.Add(cell.Used.ToString("0.##"));
+                totalLine.Add(cell.Balance.ToString("0.##"));
+                totalLine.Add(cell.Total.ToString("0.##"));
+            }
+            totalLine.Add(vm.GrandUsed.ToString("0.##"));
+            totalLine.Add(vm.GrandBalance.ToString("0.##"));
+            totalLine.Add(vm.GrandTotal.ToString("0.##"));
+            sb.AppendLine(string.Join(",", totalLine.Select(EscapeCsv)));
+
+            var monthStr = vm.SelectedMonth.HasValue
+                ? System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(vm.SelectedMonth.Value)
+                : "All";
+            var filename = $"Total_Leaves_{monthStr}_{vm.SelectedYear}.csv";
+
+            return File(System.Text.Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", filename);
+        }
+
+        private async Task<TotalLeavesViewModel> BuildTotalLeavesViewModelAsync(int? employeeId, int? month, int? year)
+        {
+            int filterYear = year ?? DateTime.Now.Year;
+            int? filterMonth = (month.HasValue && month.Value >= 1 && month.Value <= 12) ? month.Value : null;
+
+            // Load active leave types
+            var leaveTypes = await _context.LeaveTypes
+                .Where(lt => lt.IsActive)
+                .OrderBy(lt => lt.Id)
+                .ToListAsync();
+
+            // Distinct pastel colors matching user specification
+            var pastelPalette = new[]
+            {
+                (Bg: "#e0f7f4", Border: "#b2e8dc", Text: "#0a5647"), // Floater / Mint
+                (Bg: "#ebf0fa", Border: "#c6d2f7", Text: "#1e3a8a"), // Sick / Periwinkle
+                (Bg: "#faeaf4", Border: "#f4c7e6", Text: "#831843"), // Casual / Blush Pink
+                (Bg: "#fef9e3", Border: "#fce8a6", Text: "#713f12"), // Earned Leave / Pale Yellow
+                (Bg: "#ebebeb", Border: "#d5d5d5", Text: "#374151"), // WFH / Warm Grey
+                (Bg: "#e6ecf2", Border: "#cbd7e2", Text: "#1f2937"), // Unpaid / Cool Grey
+                (Bg: "#fef0ea", Border: "#fcd0c2", Text: "#9a3412")  // Peach
+            };
+
+            var leaveTypeCols = leaveTypes.Select((lt, idx) =>
+            {
+                var color = pastelPalette[idx % pastelPalette.Length];
+                return new LeaveTypeColumn
+                {
+                    Id = lt.Id,
+                    Name = lt.Name,
+                    Code = lt.Code,
+                    BgColor = color.Bg,
+                    BorderColor = color.Border,
+                    TextColor = color.Text
+                };
+            }).ToList();
+
+            // Load active employees
+            var allActiveEmployees = await _context.Employees
+                .Include(e => e.Department)
+                .Include(e => e.LeaveBalances)
+                .Where(e => e.IsActive)
+                .OrderBy(e => e.EmployeeCode)
+                .ToListAsync();
+
+            var employeeOptions = allActiveEmployees.Select(e => new EmployeeOption
+            {
+                Id = e.Id,
+                Name = e.FullName,
+                Code = e.EmployeeCode
+            }).ToList();
+
+            var filteredEmployees = allActiveEmployees.AsEnumerable();
+            if (employeeId.HasValue && employeeId.Value > 0)
+            {
+                filteredEmployees = filteredEmployees.Where(e => e.Id == employeeId.Value);
+            }
+
+            // Load approved leave requests
+            var reqQuery = _context.LeaveRequests
+                .Where(lr => lr.Status == LeaveStatus.Approved && lr.StartDate.Year == filterYear);
+
+            if (filterMonth.HasValue)
+            {
+                reqQuery = reqQuery.Where(lr => lr.StartDate.Month == filterMonth.Value);
+            }
+
+            var approvedRequests = await reqQuery.ToListAsync();
+
+            var rows = new List<EmployeeLeaveRow>();
+            var typeTotals = leaveTypes.ToDictionary(lt => lt.Id, lt => new LeaveCell());
+
+            foreach (var emp in filteredEmployees)
+            {
+                var row = new EmployeeLeaveRow
+                {
+                    EmployeeId = emp.Id,
+                    EmployeeCode = emp.EmployeeCode,
+                    EmployeeName = emp.FullName,
+                    DepartmentName = emp.Department?.Name ?? "-"
+                };
+
+                decimal empTotalUsed = 0;
+                decimal empTotalAllocated = 0;
+
+                foreach (var lt in leaveTypes)
+                {
+                    var bal = emp.LeaveBalances?.FirstOrDefault(b => b.LeaveTypeId == lt.Id);
+                    decimal allocated = bal?.Allocated ?? 0;
+
+                    decimal used = 0;
+                    if (filterMonth.HasValue)
+                    {
+                        used = approvedRequests
+                            .Where(r => r.EmployeeId == emp.Id && r.LeaveTypeId == lt.Id)
+                            .Sum(r => r.TotalDays);
+                    }
+                    else
+                    {
+                        used = bal?.Used ?? approvedRequests
+                            .Where(r => r.EmployeeId == emp.Id && r.LeaveTypeId == lt.Id)
+                            .Sum(r => r.TotalDays);
+                    }
+
+                    decimal balance = Math.Max(0, allocated - (bal?.Used ?? used));
+
+                    row.LeavesByType[lt.Id] = new LeaveCell
+                    {
+                        Used = used,
+                        Balance = balance,
+                        Total = allocated
+                    };
+
+                    empTotalUsed += used;
+                    empTotalAllocated += allocated;
+
+                    typeTotals[lt.Id].Used += used;
+                    typeTotals[lt.Id].Balance += balance;
+                    typeTotals[lt.Id].Total += allocated;
+                }
+
+                row.TotalUsed = empTotalUsed;
+                row.TotalAllocated = empTotalAllocated;
+                row.TotalBalance = Math.Max(0, empTotalAllocated - (emp.LeaveBalances?.Sum(b => b.Used) ?? empTotalUsed));
+
+                rows.Add(row);
+            }
+
+            int currentYear = DateTime.Now.Year;
+            var availableYears = Enumerable.Range(currentYear - 2, 4).OrderByDescending(y => y).ToList();
+
+            return new TotalLeavesViewModel
+            {
+                LeaveTypes = leaveTypeCols,
+                EmployeeRows = rows,
+                TypeTotals = typeTotals,
+                GrandUsed = rows.Sum(r => r.TotalUsed),
+                GrandBalance = rows.Sum(r => r.TotalBalance),
+                GrandTotal = rows.Sum(r => r.TotalAllocated),
+                SelectedEmployeeId = employeeId,
+                SelectedMonth = filterMonth,
+                SelectedYear = filterYear,
+                EmployeeOptions = employeeOptions,
+                AvailableYears = availableYears
+            };
+        }
+
+        private static string EscapeCsv(string field)
+        {
+            if (string.IsNullOrEmpty(field)) return "\"\"";
+            if (field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))
+            {
+                return $"\"{field.Replace("\"", "\"\"")}\"";
+            }
+            return $"\"{field}\"";
+        }
     }
 }

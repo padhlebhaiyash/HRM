@@ -44,9 +44,17 @@
                                 <td>
                                     @if (item.ClockInTime.HasValue)
                                     {
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                            <i class="bi bi-box-arrow-in-right me-1"></i>@item.ClockInTime.Value.ToString("hh:mm tt")
-                                        </span>
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-box-arrow-in-right me-1"></i>@item.ClockInTime.Value.ToString("hh:mm tt")
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(item.ClockInPhotoPath))
+                                            {
+                                                <a href="javascript:void(0);" onclick="showSelfieModal('@item.ClockInPhotoPath', 'My Clock In Selfie', '@item.ClockInTime.Value.ToString("hh:mm tt, dd MMM yyyy")', '@(item.ClockInLocationName ?? "Verified Location")')" title="View Clock In Selfie" class="text-decoration-none">
+                                                    <img src="@item.ClockInPhotoPath" class="rounded-circle border border-2 border-success shadow-sm" style="width: 26px; height: 26px; object-fit: cover;" alt="Selfie" />
+                                                </a>
+                                            }
+                                        </div>
                                     }
                                     else
                                     {
@@ -56,9 +64,17 @@
                                 <td>
                                     @if (item.ClockOutTime.HasValue)
                                     {
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                                            <i class="bi bi-box-arrow-left me-1"></i>@item.ClockOutTime.Value.ToString("hh:mm tt")
-                                        </span>
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                <i class="bi bi-box-arrow-left me-1"></i>@item.ClockOutTime.Value.ToString("hh:mm tt")
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(item.ClockOutPhotoPath))
+                                            {
+                                                <a href="javascript:void(0);" onclick="showSelfieModal('@item.ClockOutPhotoPath', 'My Clock Out Selfie', '@item.ClockOutTime.Value.ToString("hh:mm tt, dd MMM yyyy")', '@(item.ClockOutLocationName ?? "Verified Location")')" title="View Clock Out Selfie" class="text-decoration-none">
+                                                    <img src="@item.ClockOutPhotoPath" class="rounded-circle border border-2 border-danger shadow-sm" style="width: 26px; height: 26px; object-fit: cover;" alt="Selfie" />
+                                                </a>
+                                            }
+                                        </div>
                                     }
                                     else
                                     {
@@ -110,3 +126,38 @@
         }
     </div>
 </div>
+
+<!-- Selfie Preview Lightbox Modal -->
+<div class="modal fade" id="selfiePreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white py-2 px-3">
+                <h6 class="modal-title fw-bold" id="selfieModalTitle"><i class="bi bi-person-bounding-box me-2"></i>Attendance Selfie</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-black position-relative">
+                <img id="selfieModalImg" src="" class="img-fluid w-100" style="max-height: 380px; object-fit: cover;" alt="Selfie Verification" />
+            </div>
+            <div class="modal-footer bg-light py-2 px-3 justify-content-between">
+                <div class="text-start">
+                    <div id="selfieModalTime" class="fw-bold text-dark small"></div>
+                    <div id="selfieModalLoc" class="text-muted" style="font-size: 0.75rem;"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function showSelfieModal(photoUrl, title, timeStr, locStr) {
+            $('#selfieModalTitle').html('<i class="bi bi-person-bounding-box me-2"></i>' + (title || 'Attendance Selfie'));
+            $('#selfieModalImg').attr('src', photoUrl);
+            $('#selfieModalTime').text(timeStr || '');
+            $('#selfieModalLoc').text(locStr ? 'Location: ' + locStr : '');
+            var modal = new bootstrap.Modal(document.getElementById('selfiePreviewModal'));
+            modal.show();
+        }
+    </script>
+}

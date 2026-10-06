@@ -43,3 +43,13 @@ __pycache__/
 App_Data/
 *.csv
 
+# User Uploaded Content & Media (Attendance selfies, profile pictures, company logos)
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
+wwwroot/uploads/**/*
+!wwwroot/uploads/**/.gitkeep
+wwwroot/img/profiles/*
+!wwwroot/img/profiles/.gitkeep
+wwwroot/img/logos/*
+!wwwroot/img/logos/.gitkeep
+

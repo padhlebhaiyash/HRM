@@ -29,6 +29,12 @@
         </div>
 
         <div class="d-grid gap-2 mt-4">
+            <form asp-action="ResendWelcomeEmail" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Send/Resend welcome and password setup email to @Model.Email?');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill fw-bold w-100">
+                    <i class="bi bi-envelope-arrow-up me-1"></i> Resend Welcome Email
+                </button>
+            </form>
             <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-primary rounded-pill fw-bold">
                 <i class="bi bi-pencil me-1"></i> Edit Profile
             </a>

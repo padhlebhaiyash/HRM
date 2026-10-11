@@ -20,20 +20,20 @@ namespace HRMSystem.Services
         private (string fromEmail, string fromName, string username, string password, string smtpHost, int smtpPort, bool enableSsl) GetSmtpConfig()
         {
             var settings = _config.GetSection("EmailSettings");
-            var smtpHost = settings["SmtpHost"] ?? "smtp.gmail.com";
+            var smtpHost = (settings["SmtpHost"] ?? "smtp.gmail.com").Trim();
             var smtpPort = int.TryParse(settings["SmtpPort"], out int port) ? port : 587;
             var enableSsl = bool.TryParse(settings["EnableSsl"], out bool ssl) ? ssl : true;
-            var defaultFromEmail = settings["FromEmail"] ?? "techinovexasolutions@gmail.com";
-            var defaultFromName = settings["FromName"] ?? "HRM System";
-            var username = settings["Username"] ?? defaultFromEmail;
-            var password = settings["Password"] ?? "";
+            var defaultFromEmail = (settings["FromEmail"] ?? "techinovexasolutions@gmail.com").Trim();
+            var defaultFromName = (settings["FromName"] ?? "HRM System").Trim();
+            var username = (settings["Username"] ?? defaultFromEmail).Trim();
+            var password = (settings["Password"] ?? "").Trim();
 
             string fromEmail = defaultFromEmail;
             string fromName = defaultFromName;
 
             try
             {
-                var companySetting = _context?.CompanySettings.FirstOrDefault();
+                var companySetting = _context?.CompanySettings.OrderBy(c => c.Id).FirstOrDefault();
                 if (companySetting != null)
                 {
                     if (!string.IsNullOrWhiteSpace(companySetting.FromEmail))

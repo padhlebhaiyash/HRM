@@ -356,6 +356,64 @@ namespace HRMSystem.Controllers
             return View(employee);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendWelcomeEmail(int id)
+        {
+            var employee = await _context.Employees
+                .Include(e => e.User)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (employee == null) return NotFound();
+
+            var user = employee.User ?? await _context.Users.FirstOrDefaultAsync(u => u.EmployeeId == employee.Id);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "No login account found for this employee.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var resetTokenResult = await _authService.GeneratePasswordResetTokenAsync(user.Username);
+            if (!resetTokenResult.HasValue)
+            {
+                TempData["ErrorMessage"] = "Could not generate password setup token for this user.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var companySetting = await _context.CompanySettings.OrderBy(c => c.Id).FirstOrDefaultAsync();
+            var baseUrl = companySetting?.AppBaseUrl?.TrimEnd('/');
+
+            string? resetLink;
+            if (!string.IsNullOrEmpty(baseUrl))
+            {
+                resetLink = $"{baseUrl}/Auth/ResetPasswordViaToken?token={System.Net.WebUtility.UrlEncode(resetTokenResult.Value.token)}";
+            }
+            else
+            {
+                resetLink = Url.Action("ResetPasswordViaToken", "Auth", 
+                    new { token = resetTokenResult.Value.token }, protocol: Request.Scheme);
+            }
+
+            int expiryMinutes = _config.GetValue<int>("EmailSettings:TokenExpiryMinutes", 30);
+            try
+            {
+                await _emailService.SendWelcomeAndSetupEmailAsync(
+                    employee.Email,
+                    employee.FullName,
+                    user.Username,
+                    resetLink!,
+                    expiryMinutes);
+
+                TempData["SuccessMessage"] = $"Welcome and setup email successfully sent to {employee.Email}.";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Failed to send email to {employee.Email}: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         private bool EmployeeExists(int id)
         {
             return _context.Employees.Any(e => e.Id == id);

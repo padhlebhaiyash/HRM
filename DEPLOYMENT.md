@@ -75,7 +75,7 @@ The following steps have already been completed and verified:
      - **Value**: `Production`
    - Click **+ Add**:
      - **Name**: `EmailSettings__Password`
-     - **Value**: `ofax jmmq mzuc ioai`
+     - **Value**: `btqw movk bgdg dtob`
 4. Click **Apply** or **Save** at the top.
 
 ---

@@ -88,7 +88,13 @@
                                 </td>
                                 <td class="pe-3 text-end">
                                     <div class="btn-group">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info rounded-start-pill" title="Details">
+                                        <form asp-action="ResendWelcomeEmail" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Send/Resend welcome and password setup email to @item.Email?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-warning rounded-start-pill" title="Resend Welcome Email">
+                                                <i class="bi bi-envelope-arrow-up"></i>
+                                            </button>
+                                        </form>
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info" title="Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <a asp-controller="LeaveBalance" asp-action="Index" class="btn btn-sm btn-outline-primary" title="Leave Balances">

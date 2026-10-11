@@ -369,16 +369,23 @@ namespace HRMSystem.Controllers
             var user = employee.User ?? await _context.Users.FirstOrDefaultAsync(u => u.EmployeeId == employee.Id);
             if (user == null)
             {
-                TempData["ErrorMessage"] = "No login account found for this employee.";
+                // Auto-create login account if missing
+                var generatedUsername = !string.IsNullOrWhiteSpace(employee.EmployeeCode) 
+                    ? employee.EmployeeCode.Trim().ToLower() 
+                    : employee.Email.Split('@')[0].Trim().ToLower();
+                
+                await _authService.CreateEmployeeAccountAsync(employee.Id, generatedUsername, new List<int>());
+                user = await _context.Users.FirstOrDefaultAsync(u => u.EmployeeId == employee.Id);
+            }
+
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Could not locate or initialize a user account for this employee.";
                 return RedirectToAction(nameof(Index));
             }
 
-            var resetTokenResult = await _authService.GeneratePasswordResetTokenAsync(user.Username);
-            if (!resetTokenResult.HasValue)
-            {
-                TempData["ErrorMessage"] = "Could not generate password setup token for this user.";
-                return RedirectToAction(nameof(Index));
-            }
+            // Generate token directly for the verified user
+            var token = await _authService.GeneratePasswordResetTokenForUserAsync(user);
 
             var companySetting = await _context.CompanySettings.OrderBy(c => c.Id).FirstOrDefaultAsync();
             var baseUrl = companySetting?.AppBaseUrl?.TrimEnd('/');
@@ -386,19 +393,20 @@ namespace HRMSystem.Controllers
             string? resetLink;
             if (!string.IsNullOrEmpty(baseUrl))
             {
-                resetLink = $"{baseUrl}/Auth/ResetPasswordViaToken?token={System.Net.WebUtility.UrlEncode(resetTokenResult.Value.token)}";
+                resetLink = $"{baseUrl}/Auth/ResetPasswordViaToken?token={System.Net.WebUtility.UrlEncode(token)}";
             }
             else
             {
                 resetLink = Url.Action("ResetPasswordViaToken", "Auth", 
-                    new { token = resetTokenResult.Value.token }, protocol: Request.Scheme);
+                    new { token }, protocol: Request.Scheme)
+                    ?? $"{Request.Scheme}://{Request.Host}/Auth/ResetPasswordViaToken?token={System.Net.WebUtility.UrlEncode(token)}";
             }
 
             int expiryMinutes = _config.GetValue<int>("EmailSettings:TokenExpiryMinutes", 30);
             try
             {
                 await _emailService.SendWelcomeAndSetupEmailAsync(
-                    employee.Email,
+                    employee.Email.Trim(),
                     employee.FullName,
                     user.Username,
                     resetLink!,
@@ -408,7 +416,8 @@ namespace HRMSystem.Controllers
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Failed to send email to {employee.Email}: {ex.Message}";
+                var inner = ex.InnerException != null ? $" ({ex.InnerException.Message})" : "";
+                TempData["ErrorMessage"] = $"Failed to send email to {employee.Email}: {ex.Message}{inner}";
             }
 
             return RedirectToAction(nameof(Index));

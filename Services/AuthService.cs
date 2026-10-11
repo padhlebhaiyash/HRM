@@ -87,19 +87,11 @@ namespace HRMSystem.Services
         /// <summary>
         /// Generates a secure password-reset token for the user with the given employee email.
         /// Returns (token string, user) or null if email not found.
+        /// <summary>
+        /// Generates a secure password-reset token for a given active user.
         /// </summary>
-        public async Task<(string token, User user)?> GeneratePasswordResetTokenAsync(string email)
+        public async Task<string> GeneratePasswordResetTokenForUserAsync(User user)
         {
-            var employee = await _context.Employees
-                .FirstOrDefaultAsync(e => e.Email.ToLower() == email.ToLower());
-            if (employee == null) return null;
-
-            var user = await _context.Users
-                .Include(u => u.Employee)
-                .FirstOrDefaultAsync(u => u.EmployeeId == employee.Id && u.IsActive);
-
-            if (user == null) return null;
-
             int expiryMinutes = _config.GetValue<int>("EmailSettings:TokenExpiryMinutes", 30);
 
             // Invalidate any existing unused tokens for this user
@@ -121,6 +113,40 @@ namespace HRMSystem.Services
             _context.PasswordResetTokens.Add(resetToken);
             await _context.SaveChangesAsync();
 
+            return token;
+        }
+
+        /// <summary>
+        /// Generates a single secure password-reset token for an active user matching the given email or username.
+        /// </summary>
+        public async Task<(string token, User user)?> GeneratePasswordResetTokenAsync(string emailOrUsername)
+        {
+            var clean = (emailOrUsername ?? "").Trim().ToLower();
+            if (string.IsNullOrEmpty(clean)) return null;
+
+            // 1. Try matching employee email
+            var employee = await _context.Employees
+                .FirstOrDefaultAsync(e => e.Email.ToLower() == clean);
+
+            User? user = null;
+            if (employee != null)
+            {
+                user = await _context.Users
+                    .Include(u => u.Employee)
+                    .FirstOrDefaultAsync(u => u.EmployeeId == employee.Id && u.IsActive);
+            }
+
+            // 2. Fallback to matching username directly
+            if (user == null)
+            {
+                user = await _context.Users
+                    .Include(u => u.Employee)
+                    .FirstOrDefaultAsync(u => u.Username.ToLower() == clean && u.IsActive);
+            }
+
+            if (user == null) return null;
+
+            var token = await GeneratePasswordResetTokenForUserAsync(user);
             return (token, user);
         }
 

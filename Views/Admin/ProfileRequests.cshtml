@@ -68,7 +68,13 @@
                                 @if (string.IsNullOrEmpty(employee?.PhotoPath))
                                 {
                                     <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold" style="width:40px;height:40px;font-size:0.9rem;">
-                                        @(employee != null ? $"{employee.FirstName[0]}{employee.LastName[0]}" : "EE")
+                                        @{
+                                            var pFirst = !string.IsNullOrWhiteSpace(employee?.FirstName) ? employee.FirstName.Trim()[0].ToString() : "";
+                                            var pLast = !string.IsNullOrWhiteSpace(employee?.LastName) ? employee.LastName.Trim()[0].ToString() : "";
+                                            var pInitials = pFirst + pLast;
+                                            if (string.IsNullOrEmpty(pInitials)) pInitials = "EE";
+                                        }
+                                        @pInitials.ToUpper()
                                     </div>
                                 }
                                 else

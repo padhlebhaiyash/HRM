@@ -83,8 +83,15 @@
                                 <div class="d-flex align-items-center">
                                     @if (string.IsNullOrEmpty(emp.PhotoPath))
                                     {
+                                        var firstChar = !string.IsNullOrWhiteSpace(emp.FirstName) ? emp.FirstName.Trim()[0].ToString() : "";
+                                        var lastChar = !string.IsNullOrWhiteSpace(emp.LastName) ? emp.LastName.Trim()[0].ToString() : "";
+                                        var initials = firstChar + lastChar;
+                                        if (string.IsNullOrEmpty(initials))
+                                        {
+                                            initials = !string.IsNullOrWhiteSpace(emp.FullName) ? emp.FullName.Trim()[0].ToString() : "E";
+                                        }
                                         <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold" style="width:32px;height:32px;font-size:0.7rem;">
-                                            @emp.FirstName[0]@emp.LastName[0]
+                                            @initials.ToUpper()
                                         </div>
                                     }
                                     else
@@ -117,13 +124,17 @@
                                         data-bs-toggle="modal" data-bs-target="#editBalanceModal"
                                         data-empid="@emp.Id" 
                                         data-empname="@emp.FullName"
-                                        data-balances='@Json.Serialize(allTypes.ToDictionary(
-                                            t => t.Code,
-                                            t => {
-                                                var bal = emp.LeaveBalances?.FirstOrDefault(b => b.LeaveTypeId == t.Id);
-                                                return new { allocated = bal?.Allocated ?? 0, used = bal?.Used ?? 0 };
-                                            }
-                                        ))'>
+                                        data-balances='@Json.Serialize(allTypes
+                                            .Where(t => !string.IsNullOrEmpty(t.Code))
+                                            .GroupBy(t => t.Code, StringComparer.OrdinalIgnoreCase)
+                                            .ToDictionary(
+                                                g => g.Key,
+                                                g => {
+                                                    var typeId = g.First().Id;
+                                                    var bal = emp.LeaveBalances?.FirstOrDefault(b => b.LeaveTypeId == typeId);
+                                                    return new { allocated = bal?.Allocated ?? 0, used = bal?.Used ?? 0 };
+                                                }
+                                            ))'>
                                     <i class="bi bi-pencil-square me-1"></i>Allocate
                                 </button>
                             </td>

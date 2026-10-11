@@ -61,7 +61,12 @@ namespace HRMSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var leaveTypes = await _context.LeaveTypes.Where(lt => lt.IsActive).ToDictionaryAsync(lt => lt.Code.ToLower());
+            var activeLeaveTypes = await _context.LeaveTypes
+                .Where(lt => lt.IsActive && !string.IsNullOrEmpty(lt.Code))
+                .ToListAsync();
+            var leaveTypes = activeLeaveTypes
+                .GroupBy(lt => lt.Code.ToLower())
+                .ToDictionary(g => g.Key, g => g.First());
 
             int updatedCount = 0;
             foreach (var kvp in allocations)
@@ -159,14 +164,20 @@ namespace HRMSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Load all active employees keyed by code
-            var employees = await _context.Employees
+            // Load all active employees keyed by code (resilient to duplicates)
+            var employees = (await _context.Employees
                 .Include(e => e.LeaveBalances)
-                .Where(e => e.IsActive)
-                .ToDictionaryAsync(e => e.EmployeeCode.Trim().ToUpper());
+                .Where(e => e.IsActive && !string.IsNullOrEmpty(e.EmployeeCode))
+                .ToListAsync())
+                .GroupBy(e => e.EmployeeCode.Trim().ToUpper())
+                .ToDictionary(g => g.Key, g => g.First());
 
-            // Load all active leave types
-            var dbLeaveTypes = await _context.LeaveTypes.Where(t => t.IsActive).ToDictionaryAsync(t => t.Code.Trim().ToLower());
+            // Load all active leave types (resilient to duplicates)
+            var dbLeaveTypes = (await _context.LeaveTypes
+                .Where(t => t.IsActive && !string.IsNullOrEmpty(t.Code))
+                .ToListAsync())
+                .GroupBy(t => t.Code.Trim().ToLower())
+                .ToDictionary(g => g.Key, g => g.First());
 
             var errors = new List<string>();
             int updated = 0, created = 0;

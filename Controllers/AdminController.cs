@@ -10,10 +10,12 @@ namespace HRMSystem.Controllers
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly HRMSystem.Services.EmailService _emailService;
 
-        public AdminController(ApplicationDbContext context)
+        public AdminController(ApplicationDbContext context, HRMSystem.Services.EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<IActionResult> Dashboard()
@@ -137,9 +139,12 @@ namespace HRMSystem.Controllers
                     existing.CompanyName = settings.CompanyName;
                 }
 
-                existing.AppBaseUrl = string.IsNullOrWhiteSpace(settings.AppBaseUrl) ? null : settings.AppBaseUrl.Trim().TrimEnd('/');
-                existing.FromEmail = string.IsNullOrWhiteSpace(settings.FromEmail) ? null : settings.FromEmail.Trim();
-                existing.FromName = string.IsNullOrWhiteSpace(settings.FromName) ? null : settings.FromName.Trim();
+                if (!string.IsNullOrWhiteSpace(settings.AppBaseUrl))
+                    existing.AppBaseUrl = settings.AppBaseUrl.Trim().TrimEnd('/');
+                if (!string.IsNullOrWhiteSpace(settings.FromEmail))
+                    existing.FromEmail = settings.FromEmail.Trim();
+                if (!string.IsNullOrWhiteSpace(settings.FromName))
+                    existing.FromName = settings.FromName.Trim();
 
                 if (clearLogoImage)
                 {
@@ -165,6 +170,38 @@ namespace HRMSystem.Controllers
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Portal branding and email configurations updated successfully.";
             }
+            return RedirectToAction(nameof(CustomizePortal));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendTestEmail(string? testRecipient)
+        {
+            var recipient = string.IsNullOrWhiteSpace(testRecipient) ? "techinovexasolutions@gmail.com" : testRecipient.Trim();
+            try
+            {
+                await _emailService.SendGenericEmailAsync(
+                    recipient, 
+                    "HRM System – SMTP Relay Diagnostic Test",
+                    $@"<div style='font-family: Arial, sans-serif; padding: 24px; border: 1px solid #dee2e6; border-radius: 8px;'>
+                        <h2 style='color: #28a745; margin-top: 0;'>✅ SMTP Relay Test Succeeded!</h2>
+                        <p style='font-size: 15px;'>This test email confirms that the HRM System can successfully authenticate with Gmail and relay emails.</p>
+                        <hr style='border: 0; border-top: 1px solid #dee2e6; margin: 16px 0;' />
+                        <ul style='font-size: 14px; color: #555;'>
+                            <li><strong>Recipient:</strong> {recipient}</li>
+                            <li><strong>Timestamp (UTC):</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</li>
+                            <li><strong>SMTP Server:</strong> smtp.gmail.com:587 (TLS/SSL)</li>
+                        </ul>
+                      </div>");
+
+                TempData["SuccessMessage"] = $"Test email successfully sent to {recipient}! Check your inbox or spam folder.";
+            }
+            catch (Exception ex)
+            {
+                var innerMsg = ex.InnerException != null ? $" -> {ex.InnerException.Message}" : "";
+                TempData["ErrorMessage"] = $"SMTP Test Failed: {ex.Message}{innerMsg}";
+            }
+
             return RedirectToAction(nameof(CustomizePortal));
         }
 

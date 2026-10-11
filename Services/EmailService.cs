@@ -28,6 +28,17 @@ namespace HRMSystem.Services
             var username = (settings["Username"] ?? defaultFromEmail).Trim();
             var password = (settings["Password"] ?? "").Trim();
 
+            // Self-healing fallback if Azure environment variable was not configured or has old/placeholder value
+            if (string.IsNullOrWhiteSpace(username) || username.Contains("<"))
+            {
+                username = "techinovexasolutions@gmail.com";
+            }
+
+            if (string.IsNullOrWhiteSpace(password) || password.Contains("<") || password == "ofax jmmq mzuc ioai")
+            {
+                password = "btqw movk bgdg dtob";
+            }
+
             string fromEmail = defaultFromEmail;
             string fromName = defaultFromName;
 
@@ -47,7 +58,24 @@ namespace HRMSystem.Services
                 _logger.LogWarning(ex, "Could not load CompanySettings from database, falling back to appsettings.");
             }
 
+            if (string.IsNullOrWhiteSpace(fromEmail))
+            {
+                fromEmail = username;
+            }
+
             return (fromEmail, fromName, username, password, smtpHost, smtpPort, enableSsl);
+        }
+
+        private SmtpClient CreateSmtpClient(string smtpHost, int smtpPort, bool enableSsl, string username, string password)
+        {
+            return new SmtpClient(smtpHost, smtpPort)
+            {
+                EnableSsl = enableSsl,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(username, password),
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 25000
+            };
         }
 
         public async Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetLink, int expiryMinutes)
@@ -117,11 +145,7 @@ namespace HRMSystem.Services
 </body>
 </html>";
 
-            using var smtp = new SmtpClient(smtpHost, smtpPort)
-            {
-                EnableSsl = enableSsl,
-                Credentials = new NetworkCredential(username, password)
-            };
+            using var smtp = CreateSmtpClient(smtpHost, smtpPort, enableSsl, username, password);
 
             using var message = new MailMessage
             {
@@ -217,11 +241,7 @@ namespace HRMSystem.Services
 </body>
 </html>";
 
-            using var smtp = new SmtpClient(smtpHost, smtpPort)
-            {
-                EnableSsl = enableSsl,
-                Credentials = new NetworkCredential(username, password)
-            };
+            using var smtp = CreateSmtpClient(smtpHost, smtpPort, enableSsl, username, password);
 
             using var message = new MailMessage
             {
@@ -250,11 +270,7 @@ namespace HRMSystem.Services
         {
             var (fromEmail, fromName, username, password, smtpHost, smtpPort, enableSsl) = GetSmtpConfig();
 
-            using var smtp = new SmtpClient(smtpHost, smtpPort)
-            {
-                EnableSsl = enableSsl,
-                Credentials = new NetworkCredential(username, password)
-            };
+            using var smtp = CreateSmtpClient(smtpHost, smtpPort, enableSsl, username, password);
 
             using var message = new MailMessage
             {
@@ -275,6 +291,7 @@ namespace HRMSystem.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send generic email to {Email}", toEmail);
+                throw;
             }
         }
 
@@ -351,11 +368,7 @@ namespace HRMSystem.Services
 </body>
 </html>";
 
-            using var smtp = new SmtpClient(smtpHost, smtpPort)
-            {
-                EnableSsl = enableSsl,
-                Credentials = new NetworkCredential(smtpUsername, smtpPassword)
-            };
+            using var smtp = CreateSmtpClient(smtpHost, smtpPort, enableSsl, smtpUsername, smtpPassword);
 
             using var message = new MailMessage
             {

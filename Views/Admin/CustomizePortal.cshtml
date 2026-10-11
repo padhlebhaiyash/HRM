@@ -95,10 +95,52 @@
                                 <input type="file" name="logoFile" class="form-control" accept="image/*" />
                                 <div class="form-text small text-muted">Upload a custom logo image. Falls back to text if unavailable.</div>
                             </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="AppBaseUrl" class="form-label fw-bold small text-uppercase text-muted">Portal Base URL</label>
+                                <input asp-for="AppBaseUrl" class="form-control" placeholder="https://munrohr.inovexa.solutions" />
+                                <div class="form-text small text-muted">Base URL for emails and password reset links.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="FromEmail" class="form-label fw-bold small text-uppercase text-muted">Sender From Email</label>
+                                <input asp-for="FromEmail" class="form-control" placeholder="techinovexasolutions@gmail.com" />
+                                <div class="form-text small text-muted">The 'From' email address shown on emails.</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="FromName" class="form-label fw-bold small text-uppercase text-muted">Sender From Name</label>
+                                <input asp-for="FromName" class="form-control" placeholder="HRM System" />
+                                <div class="form-text small text-muted">The display name on outgoing emails.</div>
+                            </div>
                         </div>
                         
                         <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold"><i class="bi bi-save me-1"></i> Save Customizations</button>
                     </form>
+
+                    <!-- Email Diagnostics Section -->
+                    <div class="card mt-4 border shadow-sm">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold text-primary"><i class="bi bi-envelope-check me-2"></i> SMTP Email Relay Diagnostics</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">
+                                Test your live SMTP connection to verify that emails can authenticate and relay successfully through Gmail (<code>smtp.gmail.com:587</code>).
+                            </p>
+                            <form asp-action="SendTestEmail" method="post" class="row g-2 align-items-center">
+                                @Html.AntiForgeryToken()
+                                <div class="col-auto flex-grow-1">
+                                    <input type="email" name="testRecipient" class="form-control" placeholder="Enter recipient email (e.g. techinovexasolutions@gmail.com)" value="techinovexasolutions@gmail.com" required />
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-outline-success fw-bold px-3">
+                                        <i class="bi bi-send me-1"></i> Send Test Email
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tab 2: Notice Board -->

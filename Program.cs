@@ -7,14 +7,25 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure DataProtection keys directory
-var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
+// Configure DataProtection keys directory (use persistent storage in Azure App Service if available)
+var homeDir = Environment.GetEnvironmentVariable("HOME");
+var keysFolder = !string.IsNullOrEmpty(homeDir)
+    ? Path.Combine(homeDir, "ASP.NET", "DataProtection-Keys")
+    : Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys");
+
 if (!Directory.Exists(keysFolder))
 {
     Directory.CreateDirectory(keysFolder);
 }
+
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder));
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("HRMSystem");
+
+builder.Services.AddHttpsRedirection(options =>
+{
+    options.HttpsPort = 443;
+});
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

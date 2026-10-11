@@ -148,7 +148,7 @@ namespace HRMSystem.Data
                 // Ensure CompanySettings has default domain and email settings
                 try
                 {
-                    var companySetting = context.CompanySettings.FirstOrDefault();
+                    var companySetting = context.CompanySettings.OrderBy(c => c.Id).FirstOrDefault();
                     if (companySetting == null)
                     {
                         companySetting = new CompanySetting

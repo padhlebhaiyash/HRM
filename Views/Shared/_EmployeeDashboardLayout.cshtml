@@ -144,7 +144,7 @@
     <!-- Top Navigation Bar -->
     <header class="emp-navbar shadow-sm">
         @{
-            var companySetting = DbContext.CompanySettings.FirstOrDefault();
+            var companySetting = DbContext.CompanySettings.OrderBy(c => c.Id).FirstOrDefault();
             var companyName = companySetting?.CompanyName;
             var logoPath = companySetting?.LogoImagePath;
         }

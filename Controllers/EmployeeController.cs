@@ -106,7 +106,7 @@ namespace HRMSystem.Controllers
                 string emailNotice = "";
                 if (resetTokenResult != null)
                 {
-                    var companySetting = await _context.CompanySettings.FirstOrDefaultAsync();
+                    var companySetting = await _context.CompanySettings.OrderBy(c => c.Id).FirstOrDefaultAsync();
                     var baseUrl = companySetting?.AppBaseUrl?.TrimEnd('/');
 
                     string? resetLink;
@@ -464,8 +464,8 @@ namespace HRMSystem.Controllers
 
             try
             {
-                var defaultDept = await _context.Departments.FirstOrDefaultAsync(d => d.IsActive);
-                var defaultDesig = await _context.Designations.FirstOrDefaultAsync();
+                var defaultDept = await _context.Departments.OrderBy(d => d.Id).FirstOrDefaultAsync(d => d.IsActive);
+                var defaultDesig = await _context.Designations.OrderBy(d => d.Level).FirstOrDefaultAsync();
 
                 using (var reader = new System.IO.StreamReader(csvFile.OpenReadStream()))
                 {

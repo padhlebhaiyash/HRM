@@ -17,7 +17,7 @@
         <div class="border-end bg-white" id="sidebar-wrapper" style="width: 250px; min-height: 100vh;">
             <div class="sidebar-heading border-bottom bg-primary text-white p-3 fw-bold fs-5 text-center">
                 @{
-                    var companySetting = DbContext.CompanySettings.FirstOrDefault();
+                    var companySetting = DbContext.CompanySettings.OrderBy(c => c.Id).FirstOrDefault();
                     var companyName = companySetting?.CompanyName;
                     var logoPath = companySetting?.LogoImagePath;
                 }

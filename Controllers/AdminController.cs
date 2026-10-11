@@ -101,7 +101,7 @@ namespace HRMSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> CustomizePortal()
         {
-            var companySetting = await _context.CompanySettings.FirstOrDefaultAsync();
+            var companySetting = await _context.CompanySettings.OrderBy(c => c.Id).FirstOrDefaultAsync();
             if (companySetting == null)
             {
                 companySetting = new CompanySetting 

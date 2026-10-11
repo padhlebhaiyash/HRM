@@ -244,7 +244,7 @@ namespace HRMSystem.Controllers
 
         private async Task<string> BuildResetPasswordLinkAsync(string token)
         {
-            var companySetting = await _context.CompanySettings.FirstOrDefaultAsync();
+            var companySetting = await _context.CompanySettings.OrderBy(c => c.Id).FirstOrDefaultAsync();
             var baseUrl = companySetting?.AppBaseUrl?.TrimEnd('/');
 
             if (!string.IsNullOrWhiteSpace(baseUrl))

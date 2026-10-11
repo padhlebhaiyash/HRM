@@ -1,0 +1,15 @@
+EmployeeCode,EmployeeName,Casual,Sick,Earned,Unpaid,WFH
+001,AP Rakshe,0,0,0,0,0
+003,Amrutha Venkatasamy,3,3,13,0,0
+007,Prabhu,2,2,14,0,0
+009,Vinoth,4,4,6,0,0
+010,PREETHI S,0,0,0,3,0
+014,Ahmad Khan,4,4,6,0,0
+015,Sabir Ahmed,6,6,24,0,0
+017,Vignesh P M,6,6,3,0,0
+018,Kavya M,6,6,2,0,0
+019,MD Asif Alam,6,6,4,0,0
+EMP000,System Admin,0,0,0,0,0
+M01,Stefan,0,0,0,0,0
+M02,Elif,0,0,0,0,0
+M03,Taco Janssen,0,0,0,0,0

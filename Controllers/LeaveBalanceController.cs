@@ -172,12 +172,19 @@ namespace HRMSystem.Controllers
                 .GroupBy(e => e.EmployeeCode.Trim().ToUpper())
                 .ToDictionary(g => g.Key, g => g.First());
 
-            // Load all active leave types (resilient to duplicates)
-            var dbLeaveTypes = (await _context.LeaveTypes
-                .Where(t => t.IsActive && !string.IsNullOrEmpty(t.Code))
-                .ToListAsync())
-                .GroupBy(t => t.Code.Trim().ToLower())
-                .ToDictionary(g => g.Key, g => g.First());
+            // Load all active leave types (support both Code and Name matching, case-insensitive)
+            var activeLeaveTypes = await _context.LeaveTypes
+                .Where(t => t.IsActive)
+                .ToListAsync();
+
+            var dbLeaveTypes = new Dictionary<string, LeaveType>(StringComparer.OrdinalIgnoreCase);
+            foreach (var t in activeLeaveTypes)
+            {
+                if (!string.IsNullOrWhiteSpace(t.Code))
+                    dbLeaveTypes[t.Code.Trim().ToLower()] = t;
+                if (!string.IsNullOrWhiteSpace(t.Name))
+                    dbLeaveTypes[t.Name.Trim().ToLower()] = t;
+            }
 
             var errors = new List<string>();
             int updated = 0, created = 0;
@@ -201,11 +208,13 @@ namespace HRMSystem.Controllers
                 {
                     for (int i = 2; i < parts.Length; i++)
                     {
-                        var header = parts[i].Trim().ToLower();
-                        if (dbLeaveTypes.TryGetValue(header, out var lt))
+                        var rawHeader = parts[i].Trim();
+                        if (string.IsNullOrWhiteSpace(rawHeader)) continue; // ignore empty trailing columns like ',,,,'
+                        var headerKey = rawHeader.ToLower();
+                        if (dbLeaveTypes.TryGetValue(headerKey, out var lt))
                             columnLeaveTypes[i] = lt;
                         else
-                            errors.Add($"Header column {i + 1} '{parts[i].Trim()}' is not a recognised Leave Type and will be ignored.");
+                            errors.Add($"Header column {i + 1} '{rawHeader}' is not a recognised Leave Type and will be ignored.");
                     }
                     continue; // done with header
                 }

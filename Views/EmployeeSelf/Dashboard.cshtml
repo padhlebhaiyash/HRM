@@ -57,7 +57,7 @@
 
 <div class="row">
     <!-- Left Sidebar: Profile -->
-    <div class="col-lg-3 col-md-4 mb-4">
+    <div class="col-lg-3 col-md-4 mb-4 order-2 order-md-1">
         <!-- Profile Box -->
         <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 20px 15px;">
             <img src="@(string.IsNullOrEmpty(Model.PhotoPath) ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(Model.FullName)}&size=250&background=random" : Model.PhotoPath)" 
@@ -144,7 +144,7 @@
     </div>
 
     <!-- Right Content: Clock In/Out & Leave Requests -->
-    <div class="col-lg-9 col-md-8">
+    <div class="col-lg-9 col-md-8 order-1 order-md-2">
         @{
             var todayAttendance = ViewBag.TodayAttendance as HRMSystem.Models.Attendance;
             var officeLocations = ViewBag.OfficeLocations as IEnumerable<HRMSystem.Models.OfficeLocation>;

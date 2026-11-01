@@ -22,6 +22,12 @@ namespace HRMSystem.Controllers
         }
 
         [AuthorizeRole("Employee")]
+        public IActionResult Index()
+        {
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        [AuthorizeRole("Employee")]
         public async Task<IActionResult> Dashboard()
         {
             var empIdStr = HttpContext.Session.GetString("EmployeeId");
@@ -84,10 +90,19 @@ namespace HRMSystem.Controllers
                 .OrderBy(e => e.DateOfBirth.Value.Day)
                 .ToListAsync();
 
-            // Load Today's Attendance and Active Office Locations for Geofenced Clock In/Out widget
+            // Load Today's Attendance or active session for Geofenced Clock In/Out widget
             var today = DateTime.Today;
-            ViewBag.TodayAttendance = await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EmployeeId == empId && a.Date == today);
+            var openAttendance = await _context.Attendances
+                .Where(a => a.EmployeeId == empId && a.ClockInTime.HasValue && !a.ClockOutTime.HasValue)
+                .OrderByDescending(a => a.ClockInTime)
+                .FirstOrDefaultAsync();
+
+            var recentAttendance = await _context.Attendances
+                .Where(a => a.EmployeeId == empId && a.Date >= today.AddDays(-1) && a.Date <= today.AddDays(1))
+                .OrderByDescending(a => a.ClockInTime)
+                .FirstOrDefaultAsync();
+
+            ViewBag.TodayAttendance = openAttendance ?? recentAttendance;
             ViewBag.OfficeLocations = await _context.OfficeLocations
                 .Where(l => l.IsActive)
                 .ToListAsync();
@@ -244,9 +259,26 @@ namespace HRMSystem.Controllers
                 .FirstOrDefaultAsync(r => r.EmployeeId == empId && r.IsPending);
             ViewBag.PendingRequest = pendingRequest;
 
-            // Load notices, holidays, and birthdays dynamically
+            // Load notices, upcoming holidays, full holidays overview, and birthdays dynamically
             ViewBag.Notices = await _context.Notices.Where(n => n.IsActive).OrderByDescending(n => n.Date).ToListAsync();
-            ViewBag.Holidays = await _context.Holidays.OrderBy(h => h.Date).ToListAsync();
+
+            var today = DateTime.Today;
+            var upcomingHolidays = await _context.Holidays
+                .Where(h => h.Date >= today)
+                .OrderBy(h => h.Date)
+                .ToListAsync();
+
+            if (!upcomingHolidays.Any())
+            {
+                // Fallback to latest registered holidays if all are in past
+                upcomingHolidays = await _context.Holidays
+                    .OrderByDescending(h => h.Date)
+                    .Take(10)
+                    .OrderBy(h => h.Date)
+                    .ToListAsync();
+            }
+            ViewBag.Holidays = upcomingHolidays;
+            ViewBag.AllHolidays = await _context.Holidays.OrderBy(h => h.Date).ToListAsync();
             
             var currentMonth = DateTime.Today.Month;
             ViewBag.Birthdays = await _context.Employees
@@ -477,31 +509,19 @@ namespace HRMSystem.Controllers
                 _context.LeaveRequests.Add(request);
                 await _context.SaveChangesAsync();
 
-                // Notify Admin via Email
-                var employee = await _context.Employees.FindAsync(empId);
-                var admin = await _context.Users.Include(u => u.UserRoles!).ThenInclude(ur => ur.Role).FirstOrDefaultAsync(u => u.UserRoles!.Any(ur => ur.Role!.Name == "Admin") && u.IsActive);
-                
-                if (admin != null && employee != null)
+                // Notify Reporting Managers and Admin via Email
+                try
                 {
-                    var leaveType = await _context.LeaveTypes.FindAsync(request.LeaveTypeId);
-                    var typeName = leaveType?.Name ?? "Unknown";
-
-                    string subject = $"New Leave Request: {employee.FullName}";
-                    string body = $@"
-                        <h3>New Leave Application</h3>
-                        <p><strong>Employee:</strong> {employee.FullName} ({employee.EmployeeCode})</p>
-                        <p><strong>Type:</strong> {typeName} {(request.HalfDayPeriod != HalfDayPeriod.None ? $"({request.HalfDayPeriod})" : "")}</p>
-                        <p><strong>Dates:</strong> {request.StartDate:dd MMM yyyy} to {request.EndDate:dd MMM yyyy}</p>
-                        <p><strong>Reason:</strong> {request.Reason}</p>
-                        <p><a href='#'>Login to Approve/Reject</a></p>";
-                    
-                    // Using a default fallback email for POC since User model doesn't have an Email property
-                    string adminEmail = "hr@company.com";
-                    await _emailService.SendGenericEmailAsync(adminEmail, subject, body);
+                    await _emailService.NotifyLeaveApplicationAsync(request.Id, Request.Scheme, Request.Host.Value);
+                }
+                catch
+                {
+                    // Email delivery failure should not block successful leave application
                 }
 
-                TempData["SuccessMessage"] = "Leave request submitted successfully. A notification has been sent to HR.";
+                TempData["SuccessMessage"] = "Leave request submitted successfully. A notification has been sent to your reporting manager and HR/Admin.";
                 return RedirectToAction("MyLeaves");
+
             }
 
             var leaveBalances = await _context.LeaveBalances.Include(b => b.LeaveType).Where(lb => lb.EmployeeId == empId).ToListAsync();

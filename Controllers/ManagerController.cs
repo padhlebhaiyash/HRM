@@ -81,6 +81,11 @@ namespace HRMSystem.Controllers
             var empIdStr = HttpContext.Session.GetString("EmployeeId");
             if (!int.TryParse(empIdStr, out int empId)) return Unauthorized();
 
+            ViewBag.Manager = await _context.Employees
+                .Include(e => e.Department)
+                .Include(e => e.Designation)
+                .FirstOrDefaultAsync(e => e.Id == empId);
+
             var subordinateIds = await _context.Employees
                 .Where(e => e.ManagerId == empId && e.IsActive)
                 .Select(e => e.Id)

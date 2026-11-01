@@ -57,6 +57,12 @@ namespace HRMSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Employee employee, string username, List<int> selectedRoles)
         {
+            if (string.IsNullOrWhiteSpace(Request.Form["Salary"]))
+            {
+                ModelState.Remove("Salary");
+                employee.Salary = 0;
+            }
+
             if (string.IsNullOrEmpty(username))
             {
                 ModelState.AddModelError("username", "Username is required for the employee account.");
@@ -211,6 +217,12 @@ namespace HRMSystem.Controllers
         {
             if (id != employee.Id) return NotFound();
 
+            if (string.IsNullOrWhiteSpace(Request.Form["Salary"]))
+            {
+                ModelState.Remove("Salary");
+                employee.Salary = 0;
+            }
+
             if (!string.IsNullOrEmpty(employee.Email))
             {
                 var adminDesignation = await _context.Designations.FirstOrDefaultAsync(d => d.Name == "Admin");
@@ -269,13 +281,40 @@ namespace HRMSystem.Controllers
 
                     // Update Roles
                     var user = await _context.Users.Include(u => u.UserRoles).FirstOrDefaultAsync(u => u.EmployeeId == employee.Id);
-                    if (user != null && selectedRoles != null && selectedRoles.Any())
+                    if (user != null)
                     {
-                        var existingMap = _context.UserRoles.Where(ur => ur.UserId == user.Id);
-                        _context.UserRoles.RemoveRange(existingMap);
-                        foreach(var rId in selectedRoles)
+                        if (selectedRoles != null && selectedRoles.Any())
                         {
-                            _context.UserRoles.Add(new UserRoleMapping { UserId = user.Id, RoleId = rId });
+                            var existingMap = _context.UserRoles.Where(ur => ur.UserId == user.Id);
+                            _context.UserRoles.RemoveRange(existingMap);
+                            foreach(var rId in selectedRoles)
+                            {
+                                _context.UserRoles.Add(new UserRoleMapping { UserId = user.Id, RoleId = rId });
+                            }
+                        }
+                        else
+                        {
+                            // Keep role dynamically synced with designation by name (avoid hardcoded IDs)
+                            var desig = await _context.Designations.FindAsync(employee.DesignationId);
+                            if (desig != null)
+                            {
+                                if (desig.Name.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var managerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Manager");
+                                    if (managerRole != null && !user.UserRoles!.Any(ur => ur.RoleId == managerRole.Id))
+                                    {
+                                        _context.UserRoles.Add(new UserRoleMapping { UserId = user.Id, RoleId = managerRole.Id });
+                                    }
+                                }
+                                else if (desig.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+                                    if (adminRole != null && !user.UserRoles!.Any(ur => ur.RoleId == adminRole.Id))
+                                    {
+                                        _context.UserRoles.Add(new UserRoleMapping { UserId = user.Id, RoleId = adminRole.Id });
+                                    }
+                                }
+                            }
                         }
                     }
 

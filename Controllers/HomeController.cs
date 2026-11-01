@@ -20,12 +20,12 @@ public class HomeController : Controller
             var sessionRoles = HttpContext.Session.GetString("UserRoles") ?? "";
             var portal = HttpContext.Session.GetString("LoginPortal") ?? "Employee";
 
-            if (sessionRoles.Contains("Admin"))
-                return RedirectToAction("Dashboard", "Admin");
-            else if (portal == "Manager")
-                return RedirectToAction("Dashboard", "Manager");
-            else
+            if (portal == "Employee")
                 return RedirectToAction("Dashboard", "EmployeeSelf");
+            else if (sessionRoles.Contains("Admin"))
+                return RedirectToAction("Dashboard", "Admin");
+            else
+                return RedirectToAction("Dashboard", "Manager");
         }
         
         return RedirectToAction("Login", "Auth");

@@ -74,39 +74,50 @@
         padding: 5px;
         font-size: 0.75rem;
         margin-right: 15px;
+        border-radius: 4px;
+    }
+    .notice-item-link {
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        transition: background-color 0.15s ease-in-out;
+    }
+    .notice-item-link:hover {
+        background-color: #f1f5f9;
     }
     .holiday-item {
         display: flex;
         justify-content: space-between;
-        padding: 8px 12px;
+        align-items: center;
+        padding: 10px 12px;
         font-size: 0.85rem;
         margin-bottom: 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(0,0,0,0.06);
     }
 </style>
 
 <div class="row">
     <!-- Left Column: Profile Card -->
     <div class="col-lg-3">
-        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px; position: relative;">
-            <div style="position: relative; display: inline-block;">
-                <img src="@photoUrl" alt="Profile Photo" class="profile-img mb-3" id="profileImageDisplay" />
-                <button type="button" class="btn btn-sm btn-dark opacity-75" 
-                        style="position: absolute; bottom: 20px; right: 5px; border-radius: 50%;"
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 20px 15px; position: relative;">
+            <div class="position-relative d-inline-block mb-2">
+                <img src="@photoUrl" alt="Profile Photo" class="profile-img" id="profileImageDisplay" />
+                <button type="button" class="btn btn-sm btn-dark rounded-circle position-absolute shadow-sm" 
+                        style="bottom: 2px; right: 2px; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;"
+                        title="Update Profile Photo"
                         onclick="document.getElementById('photoInput').click()">
-                    <i class="bi bi-camera"></i>
+                    <i class="bi bi-camera-fill" style="font-size: 0.85rem;"></i>
                 </button>
                 <form id="photoForm" asp-action="UpdatePhoto" method="post" enctype="multipart/form-data" style="display:none;">
                     <input type="file" id="photoInput" name="photo" accept="image/*" onchange="document.getElementById('photoForm').submit()" />
                 </form>
             </div>
             
-            <h3 class="profile-name">@Model.FullName</h3>
-            <div class="profile-role">
+            <h3 class="profile-name mt-2 mb-1">@Model.FullName</h3>
+            <div class="profile-role mb-1">
                 @Model.Designation?.Name<br>
                 @Model.Department?.Name
-            </div>
-            <div class="status-box">
-                At work for : @years y @months m @days d
             </div>
         </div>
 
@@ -280,19 +291,27 @@
     <div class="col-lg-3">
         <!-- Notice Board -->
         <div class="profile-section-card shadow-sm">
-            <div class="profile-section-header">
-                <i class="bi bi-megaphone-fill me-2"></i> Notice Board
+            <div class="profile-section-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-megaphone-fill me-2"></i> Notice Board</span>
+                <button type="button" class="btn btn-xs btn-outline-light rounded-pill px-2 py-0" style="font-size: 0.72rem;" data-bs-toggle="modal" data-bs-target="#noticeOverviewModal" title="View all notices">
+                    <i class="bi bi-eye me-1"></i>Overview
+                </button>
             </div>
             <div class="profile-section-body">
                 @if (ViewBag.Notices != null && ((IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices).Any())
                 {
-                    foreach (var notice in (IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices)
+                    foreach (var notice in ((IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices).Take(5))
                     {
-                        <div class="d-flex align-items-start mb-3">
+                        var jsTitle = notice.Title.Replace("'", "\\'").Replace("\"", "&quot;");
+                        var jsContent = notice.Content.Replace("'", "\\'").Replace("\"", "&quot;").Replace("\r\n", "<br>").Replace("\n", "<br>");
+                        <div class="d-flex align-items-start mb-3 notice-item-link" onclick="showNoticeDetail('@jsTitle', '@notice.Date.ToString("dd MMMM yyyy")', '@jsContent')" title="Click to view announcement">
                             <div class="notice-date me-3" style="flex-shrink: 0;">
-                                @notice.Date.ToString("dd")<br>@notice.Date.ToString("MM, yyyy")
+                                @notice.Date.ToString("dd")<br>@notice.Date.ToString("MMM, yy")
                             </div>
-                            <div class="small fw-bold text-muted mt-1" title="@notice.Content">@notice.Title</div>
+                            <div class="overflow-hidden" style="flex: 1;">
+                                <div class="small fw-bold text-dark text-truncate">@notice.Title</div>
+                                <div class="text-muted small text-truncate" style="font-size: 0.75rem;">@notice.Content</div>
+                            </div>
                         </div>
                     }
                 }
@@ -305,24 +324,38 @@
 
         <!-- Upcoming Holidays -->
         <div class="profile-section-card shadow-sm">
-            <div class="profile-section-header">
-                <i class="bi bi-send-fill me-2"></i> Upcoming Holidays
+            <div class="profile-section-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-send-fill me-2"></i> Upcoming Holidays</span>
+                <button type="button" class="btn btn-xs btn-outline-light rounded-pill px-2 py-0" style="font-size: 0.72rem;" data-bs-toggle="modal" data-bs-target="#holidayOverviewModal" title="View complete holiday calendar">
+                    <i class="bi bi-calendar3 me-1"></i>Overview
+                </button>
             </div>
             <div class="profile-section-body p-2">
                 @if (ViewBag.Holidays != null && ((IEnumerable<HRMSystem.Models.Holiday>)ViewBag.Holidays).Any())
                 {
-                    foreach (var holiday in (IEnumerable<HRMSystem.Models.Holiday>)ViewBag.Holidays)
+                    var today = DateTime.Today;
+                    foreach (var holiday in ((IEnumerable<HRMSystem.Models.Holiday>)ViewBag.Holidays).Take(5))
                     {
                         string textColor = holiday.Color switch
                         {
                             "#fffde7" => "text-warning",
                             "#ffebee" => "text-danger",
                             "#f1f8e9" => "text-success",
-                            _ => "text-muted"
+                            _ => "text-primary"
                         };
-                        <div class="holiday-item mb-2" style="background-color: @holiday.Color; padding: 10px; border-radius: 4px;">
-                            <div class="fw-bold @textColor">@holiday.Name</div>
-                            <div class="text-muted italic">@holiday.Date.ToString("dd MMM yyyy")</div>
+                        var daysLeft = (holiday.Date.Date - today).Days;
+                        string timingBadge = daysLeft == 0 ? "Today" : (daysLeft == 1 ? "Tomorrow" : (daysLeft > 1 ? $"In {daysLeft}d" : "Past"));
+
+                        <div class="holiday-item mb-2" style="background-color: @holiday.Color;">
+                            <div>
+                                <div class="fw-bold @textColor" style="font-size: 0.88rem;">@holiday.Name</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">
+                                    <i class="bi bi-calendar-event me-1"></i>@holiday.Date.ToString("ddd, dd MMM yyyy")
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-white text-dark border shadow-xs" style="font-size: 0.7rem;">@timingBadge</span>
+                            </div>
                         </div>
                     }
                 }
@@ -400,3 +433,136 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Notice Detail -->
+<div class="modal fade" id="noticeDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold" id="detailNoticeTitle"><i class="bi bi-megaphone-fill me-2"></i>Notice Announcement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex align-items-center mb-3 text-muted small">
+                    <i class="bi bi-calendar-event me-2 text-primary"></i> Published: <span id="detailNoticeDate" class="fw-bold ms-1 text-dark"></span>
+                </div>
+                <div id="detailNoticeBody" class="p-3 bg-light rounded-3 text-secondary" style="line-height: 1.6; font-size: 0.95rem;"></div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Notice Board Overview -->
+<div class="modal fade" id="noticeOverviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-megaphone-fill me-2"></i>Notice Board Overview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                @if (ViewBag.Notices != null && ((IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices).Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var notice in (IEnumerable<HRMSystem.Models.Notice>)ViewBag.Notices)
+                        {
+                            <div class="list-group-item p-3 mb-3 rounded border bg-light">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold text-dark mb-0">@notice.Title</h6>
+                                    <span class="badge bg-primary rounded-pill"><i class="bi bi-calendar me-1"></i>@notice.Date.ToString("dd MMM yyyy")</span>
+                                </div>
+                                <p class="text-secondary small mb-0" style="white-space: pre-line; line-height: 1.6;">@notice.Content</p>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-megaphone display-4 text-muted opacity-50 mb-3"></i>
+                        <p class="mb-0">No active notice board announcements at this time.</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Holiday Calendar Overview -->
+<div class="modal fade" id="holidayOverviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-event me-2"></i>Holiday Calendar Overview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                @{
+                    var allHolidays = (ViewBag.AllHolidays as IEnumerable<HRMSystem.Models.Holiday>) ?? (ViewBag.Holidays as IEnumerable<HRMSystem.Models.Holiday>);
+                }
+                @if (allHolidays != null && allHolidays.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle border">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th>Holiday Name</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in allHolidays)
+                                {
+                                    var daysDiff = (h.Date.Date - DateTime.Today).Days;
+                                    string statusBadge = daysDiff == 0 ? "<span class='badge bg-danger'>Today</span>" 
+                                        : (daysDiff > 0 ? $"<span class='badge bg-success'>Upcoming ({daysDiff} days)</span>" 
+                                        : "<span class='badge bg-secondary'>Past</span>");
+
+                                    <tr style="background-color: @(h.Date.Date == DateTime.Today ? "#fff3cd" : "inherit")">
+                                        <td class="fw-bold">@h.Date.ToString("dd MMM yyyy")</td>
+                                        <td class="text-muted">@h.Date.ToString("dddd")</td>
+                                        <td>
+                                            <span class="badge" style="background-color: @h.Color; color: #333; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                                <i class="bi bi-flag-fill me-1"></i>@h.Name
+                                            </span>
+                                        </td>
+                                        <td>@Html.Raw(statusBadge)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-calendar-x display-4 text-muted opacity-50 mb-3"></i>
+                        <p class="mb-0">No holidays registered in the system calendar.</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function showNoticeDetail(title, date, content) {
+            $('#detailNoticeTitle').html('<i class="bi bi-megaphone-fill me-2"></i>' + title);
+            $('#detailNoticeDate').text(date);
+            $('#detailNoticeBody').html(content);
+            new bootstrap.Modal(document.getElementById('noticeDetailModal')).show();
+        }
+    </script>
+}

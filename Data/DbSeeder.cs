@@ -153,10 +153,10 @@ namespace HRMSystem.Data
                     {
                         companySetting = new CompanySetting
                         {
-                            CompanyName = null,
+                            CompanyName = "MunroHR",
                             AppBaseUrl = "https://munrohr.inovexa.solutions",
                             FromEmail = "techinovexasolutions@gmail.com",
-                            FromName = "HRM System"
+                            FromName = "MunroHR"
                         };
                         context.CompanySettings.Add(companySetting);
                         context.SaveChanges();
@@ -174,9 +174,9 @@ namespace HRMSystem.Data
                             companySetting.FromEmail = "techinovexasolutions@gmail.com";
                             updated = true;
                         }
-                        if (string.IsNullOrWhiteSpace(companySetting.FromName))
+                        if (string.IsNullOrWhiteSpace(companySetting.FromName) || companySetting.FromName == "HRM System")
                         {
-                            companySetting.FromName = "HRM System";
+                            companySetting.FromName = "MunroHR";
                             updated = true;
                         }
                         if (updated)
@@ -189,6 +189,68 @@ namespace HRMSystem.Data
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[WARNING] DbSeeder CompanySettings warning: {ex.Message}");
+                }
+
+                // Seed Default Corporate Notices if none exist
+                try
+                {
+                    if (!context.Notices.Any())
+                    {
+                        context.Notices.AddRange(
+                            new Notice
+                            {
+                                Title = "Welcome to MunroHR Portal",
+                                Content = "Welcome to our comprehensive Employee Self-Service and HRM platform. You can now track your daily attendance with GPS verification, apply for leaves, access monthly payslips, and keep your profile up to date.",
+                                Date = DateTime.Today,
+                                IsActive = true
+                            },
+                            new Notice
+                            {
+                                Title = "Workplace Attendance & Geofencing Guidelines",
+                                Content = "Employees are reminded that Clock-In and Clock-Out verify live face selfies and designated office radius. Local timezones are automatically resolved for global team members.",
+                                Date = DateTime.Today.AddDays(-3),
+                                IsActive = true
+                            },
+                            new Notice
+                            {
+                                Title = "Annual Leave & Holiday Planning",
+                                Content = "Please review the upcoming holidays in your profile and calendar. Submit any planned leave requests in advance through the My Leaves section for manager approval.",
+                                Date = DateTime.Today.AddDays(-7),
+                                IsActive = true
+                            }
+                        );
+                        context.SaveChanges();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] DbSeeder Notices warning: {ex.Message}");
+                }
+
+                // Seed Default Holidays if none exist
+                try
+                {
+                    if (!context.Holidays.Any())
+                    {
+                        var curYear = DateTime.Today.Year;
+                        context.Holidays.AddRange(
+                            new Holiday { Name = "New Year's Day", Date = new DateTime(curYear, 1, 1), Color = "#f1f8e9" },
+                            new Holiday { Name = "Republic Day", Date = new DateTime(curYear, 1, 26), Color = "#fffde7" },
+                            new Holiday { Name = "Good Friday", Date = new DateTime(curYear, 4, 3), Color = "#f1f8e9" },
+                            new Holiday { Name = "International Workers' Day", Date = new DateTime(curYear, 5, 1), Color = "#fffde7" },
+                            new Holiday { Name = "Independence Day", Date = new DateTime(curYear, 8, 15), Color = "#ffebee" },
+                            new Holiday { Name = "Gandhi Jayanti", Date = new DateTime(curYear, 10, 2), Color = "#fffde7" },
+                            new Holiday { Name = "Diwali (Festival of Lights)", Date = new DateTime(curYear, 11, 8), Color = "#fffde7" },
+                            new Holiday { Name = "Christmas Day", Date = new DateTime(curYear, 12, 25), Color = "#f1f8e9" },
+                            new Holiday { Name = "New Year's Day", Date = new DateTime(curYear + 1, 1, 1), Color = "#f1f8e9" },
+                            new Holiday { Name = "Republic Day", Date = new DateTime(curYear + 1, 1, 26), Color = "#fffde7" }
+                        );
+                        context.SaveChanges();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] DbSeeder Holidays warning: {ex.Message}");
                 }
 
                 // Remove test employee Nita (EMP005) if exists

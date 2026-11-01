@@ -72,8 +72,8 @@
                             <th>Date</th>
                             <th>Clock In</th>
                             <th>Clock Out</th>
-                            <th class="text-center">Selfie Proof</th>
                             <th>Work Duration</th>
+                            <th>Overtime</th>
                             <th>GPS Verified</th>
                             <th>Punch Location</th>
                             <th>Status</th>
@@ -129,29 +129,8 @@
                                         <span class="text-muted">--:--</span>
                                     }
                                 </td>
-                                <td class="text-center">
-                                    <div class="d-inline-flex align-items-center gap-2">
-                                        @if (!string.IsNullOrEmpty(item.ClockInPhotoPath))
-                                        {
-                                            <div class="position-relative d-inline-block" role="button" onclick="showSelfieModal('@item.ClockInPhotoPath', '@(item.Employee?.FullName ?? "Employee") - Clock In Selfie', '@(item.ClockInTime.HasValue ? item.ClockInTime.Value.ToString("hh:mm tt, dd MMM yyyy") : "")', '@(item.ClockInLocationName ?? "Verified Location")')" title="Click to view Clock In Selfie">
-                                                <img src="@item.ClockInPhotoPath" class="rounded-circle border border-2 border-success shadow-sm" style="width: 34px; height: 34px; object-fit: cover; cursor: pointer;" alt="In" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(item.Employee?.FullName ?? "Emp"))&background=e8f5e9&color=2e7d32';" />
-                                                <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success p-1" style="font-size: 0.55rem; line-height: 1;" title="Clock-In Photo">IN</span>
-                                            </div>
-                                        }
-                                        @if (!string.IsNullOrEmpty(item.ClockOutPhotoPath))
-                                        {
-                                            <div class="position-relative d-inline-block" role="button" onclick="showSelfieModal('@item.ClockOutPhotoPath', '@(item.Employee?.FullName ?? "Employee") - Clock Out Selfie', '@(item.ClockOutTime.HasValue ? item.ClockOutTime.Value.ToString("hh:mm tt, dd MMM yyyy") : "")', '@(item.ClockOutLocationName ?? "Verified Location")')" title="Click to view Clock Out Selfie">
-                                                <img src="@item.ClockOutPhotoPath" class="rounded-circle border border-2 border-danger shadow-sm" style="width: 34px; height: 34px; object-fit: cover; cursor: pointer;" alt="Out" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(item.Employee?.FullName ?? "Emp"))&background=ffebee&color=c62828';" />
-                                                <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-danger p-1" style="font-size: 0.55rem; line-height: 1;" title="Clock-Out Photo">OUT</span>
-                                            </div>
-                                        }
-                                        @if (string.IsNullOrEmpty(item.ClockInPhotoPath) && string.IsNullOrEmpty(item.ClockOutPhotoPath))
-                                        {
-                                            <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem;"><i class="bi bi-camera-slash me-1"></i>None</span>
-                                        }
-                                    </div>
-                                </td>
                                 <td class="fw-bold text-primary">@item.DisplayWorkDuration</td>
+                                <td class="fw-bold text-primary">@item.DisplayOvertime</td>
                                 <td>
                                     @if (item.IsLocationVerified)
                                     {

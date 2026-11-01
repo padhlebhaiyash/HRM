@@ -24,6 +24,43 @@ namespace HRMSystem.Controllers
             public double Longitude { get; set; }
             public string? LocationName { get; set; }
             public string? PhotoBase64 { get; set; }
+            public string? TimeZone { get; set; }
+            public int? UtcOffsetMinutes { get; set; }
+        }
+
+        public static DateTime GetUserLocalTime(string? timeZoneId, int? utcOffsetMinutes = null)
+        {
+            var utcNow = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(timeZoneId))
+            {
+                try
+                {
+                    var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId.Trim());
+                    return TimeZoneInfo.ConvertTimeFromUtc(utcNow, tz);
+                }
+                catch
+                {
+                    if (TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZoneId.Trim(), out string? winId))
+                    {
+                        try
+                        {
+                            var tz = TimeZoneInfo.FindSystemTimeZoneById(winId);
+                            return TimeZoneInfo.ConvertTimeFromUtc(utcNow, tz);
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            if (utcOffsetMinutes.HasValue)
+            {
+                // In JavaScript, new Date().getTimezoneOffset() returns (UTC - Local) in minutes.
+                // E.g. for India (UTC+5:30), offset is -330.
+                // Local = UTC - (offset) = utcNow.AddMinutes(-utcOffsetMinutes.Value).
+                return utcNow.AddMinutes(-utcOffsetMinutes.Value);
+            }
+
+            return DateTime.UtcNow;
         }
 
         private async Task<string?> SaveBase64ImageAsync(string? base64Data, string prefix, int employeeId)
@@ -41,7 +78,7 @@ namespace HRMSystem.Controllers
                 var uploadsDir = Path.Combine(webRoot, "uploads", "attendance");
                 if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
 
-                var fileName = $"{prefix}_{employeeId}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 6)}.jpg";
+                var fileName = $"{prefix}_{employeeId}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N").Substring(0, 6)}.jpg";
                 var filePath = Path.Combine(uploadsDir, fileName);
 
                 await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
@@ -64,9 +101,11 @@ namespace HRMSystem.Controllers
             var employee = await _context.Employees.FindAsync(empId);
             if (employee == null || !employee.IsActive) return Json(new { success = false, message = "Employee record not active." });
 
-            var today = DateTime.Today;
+            var localNow = GetUserLocalTime(model.TimeZone, model.UtcOffsetMinutes);
+            var localDate = localNow.Date;
+
             var todayRecord = await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EmployeeId == empId && a.Date == today);
+                .FirstOrDefaultAsync(a => a.EmployeeId == empId && a.Date == localDate);
 
             if (todayRecord != null && todayRecord.ClockInTime.HasValue)
             {
@@ -155,29 +194,30 @@ namespace HRMSystem.Controllers
                 todayRecord = new Attendance
                 {
                     EmployeeId = empId,
-                    Date = today,
-                    ClockInTime = DateTime.Now,
+                    Date = localDate,
+                    ClockInTime = localNow,
                     ClockInLatitude = model.Latitude,
                     ClockInLongitude = model.Longitude,
                     ClockInLocationName = matchedLocation?.Name ?? model.LocationName ?? "Verified Location",
                     ClockInPhotoPath = photoPath,
                     IsLocationVerified = true,
                     Status = "Clocked In",
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    CreatedAt = localNow,
+                    UpdatedAt = localNow
                 };
                 _context.Attendances.Add(todayRecord);
             }
             else
             {
-                todayRecord.ClockInTime = DateTime.Now;
+                todayRecord.Date = localDate;
+                todayRecord.ClockInTime = localNow;
                 todayRecord.ClockInLatitude = model.Latitude;
                 todayRecord.ClockInLongitude = model.Longitude;
                 todayRecord.ClockInLocationName = matchedLocation?.Name ?? model.LocationName ?? "Verified Location";
                 todayRecord.ClockInPhotoPath = photoPath;
                 todayRecord.IsLocationVerified = true;
                 todayRecord.Status = "Clocked In";
-                todayRecord.UpdatedAt = DateTime.Now;
+                todayRecord.UpdatedAt = localNow;
                 _context.Attendances.Update(todayRecord);
             }
 
@@ -200,9 +240,22 @@ namespace HRMSystem.Controllers
             var empIdStr = HttpContext.Session.GetString("EmployeeId");
             if (!int.TryParse(empIdStr, out int empId)) return Json(new { success = false, message = "Unauthorized user session." });
 
-            var today = DateTime.Today;
+            var localNow = GetUserLocalTime(model.TimeZone, model.UtcOffsetMinutes);
+            var localDate = localNow.Date;
+
+            // Prioritize an open (unclosed) clock-in record for this employee, fallback to today's local date record
             var todayRecord = await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EmployeeId == empId && a.Date == today);
+                .Where(a => a.EmployeeId == empId && a.ClockInTime.HasValue && !a.ClockOutTime.HasValue)
+                .OrderByDescending(a => a.ClockInTime)
+                .FirstOrDefaultAsync();
+
+            if (todayRecord == null)
+            {
+                todayRecord = await _context.Attendances
+                    .Where(a => a.EmployeeId == empId && a.Date == localDate)
+                    .OrderByDescending(a => a.ClockInTime)
+                    .FirstOrDefaultAsync();
+            }
 
             if (todayRecord == null || !todayRecord.ClockInTime.HasValue)
             {
@@ -260,7 +313,7 @@ namespace HRMSystem.Controllers
             }
 
             // Complete Clock Out
-            todayRecord.ClockOutTime = DateTime.Now;
+            todayRecord.ClockOutTime = localNow;
             todayRecord.ClockOutLatitude = model.Latitude;
             todayRecord.ClockOutLongitude = model.Longitude;
             todayRecord.ClockOutLocationName = matchedLocation?.Name ?? model.LocationName ?? "Verified Location";
@@ -277,7 +330,7 @@ namespace HRMSystem.Controllers
             var duration = (todayRecord.ClockOutTime.Value - todayRecord.ClockInTime.Value).TotalMinutes;
             todayRecord.WorkDurationMinutes = Math.Max(0, duration);
             todayRecord.Status = "Completed";
-            todayRecord.UpdatedAt = DateTime.Now;
+            todayRecord.UpdatedAt = localNow;
 
             _context.Attendances.Update(todayRecord);
             await _context.SaveChangesAsync();
@@ -294,14 +347,27 @@ namespace HRMSystem.Controllers
 
         [AuthorizeRole("Employee")]
         [HttpGet]
-        public async Task<IActionResult> GetTodayStatus()
+        public async Task<IActionResult> GetTodayStatus([FromQuery] string? timeZone = null, [FromQuery] int? utcOffsetMinutes = null)
         {
             var empIdStr = HttpContext.Session.GetString("EmployeeId");
             if (!int.TryParse(empIdStr, out int empId)) return Json(new { isClockedIn = false, isClockedOut = false, error = "No employee session" });
 
-            var today = DateTime.Today;
+            var localNow = GetUserLocalTime(timeZone, utcOffsetMinutes);
+            var localDate = localNow.Date;
+
+            // Prioritize an open (unclosed) clock-in record for this employee, fallback to today's local date record
             var record = await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EmployeeId == empId && a.Date == today);
+                .Where(a => a.EmployeeId == empId && a.ClockInTime.HasValue && !a.ClockOutTime.HasValue)
+                .OrderByDescending(a => a.ClockInTime)
+                .FirstOrDefaultAsync();
+
+            if (record == null)
+            {
+                record = await _context.Attendances
+                    .Where(a => a.EmployeeId == empId && a.Date == localDate)
+                    .OrderByDescending(a => a.ClockInTime)
+                    .FirstOrDefaultAsync();
+            }
 
             var activeOfficeLocations = await _context.OfficeLocations
                 .Where(l => l.IsActive)

@@ -38,8 +38,8 @@
                 @{
                     var userRoles = HttpContextAccessor.HttpContext?.Session.GetString("UserRoles") ?? "";
                     var loginPortal = HttpContextAccessor.HttpContext?.Session.GetString("LoginPortal") ?? "Employee";
-                    var isAdmin = userRoles.Contains("Admin");
-                    var isManagerPortal = loginPortal == "Manager" && !isAdmin;
+                    var isAdmin = userRoles.Contains("Admin", StringComparison.OrdinalIgnoreCase);
+                    var isManagerPortal = (loginPortal.Equals("Manager", StringComparison.OrdinalIgnoreCase) || userRoles.Contains("Manager", StringComparison.OrdinalIgnoreCase)) && !isAdmin;
 
                     if (isAdmin)
                     {
@@ -47,7 +47,7 @@
                         <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Department" asp-action="Index"><i class="bi bi-diagram-3"></i> Departments</a>
                         <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Employee" asp-action="Index"><i class="bi bi-people"></i> Employees</a>
                         <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Leave" asp-action="Index"><i class="bi bi-envelope-paper"></i> Leave Requests</a>
-                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="LeaveBalance" asp-action="Index"><i class="bi bi-wallet2"></i> Leave Balances</a>
+                        <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="LeaveBalance" asp-action="Index"><i class="bi bi-wallet2"></i> Custom Leave Allocation</a>
                         <a class="list-group-item list-group-item-action list-group-item-light p-3" asp-controller="Payroll" asp-action="Index"><i class="bi bi-cash-coin"></i> Payroll</a>
                         <a class="list-group-item list-group-item-action list-group-item-light p-3 text-primary fw-bold" asp-controller="Admin" asp-action="CustomizePortal"><i class="bi bi-sliders"></i> Customize Portal</a>
                         

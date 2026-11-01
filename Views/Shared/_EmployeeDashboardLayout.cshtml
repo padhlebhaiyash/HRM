@@ -84,10 +84,15 @@
 
         /* Profile Left Sidebar Styles */
         .profile-img {
-            width: 100%;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
             object-fit: cover;
-            aspect-ratio: 4/5;
-            background-color: #ddd;
+            background-color: #f1f5f9;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            margin: 0 auto;
+            display: block;
         }
         
         .profile-name {
@@ -162,10 +167,11 @@
             @{
                 var loginPortal = HttpContextAccessor.HttpContext?.Session.GetString("LoginPortal") ?? "Employee";
                 var userRoles = HttpContextAccessor.HttpContext?.Session.GetString("UserRoles") ?? "";
-                var isAdmin = userRoles.Contains("Admin");
+                var isAdmin = userRoles.Contains("Admin", StringComparison.OrdinalIgnoreCase);
+                var isManager = userRoles.Contains("Manager", StringComparison.OrdinalIgnoreCase) || loginPortal.Equals("Manager", StringComparison.OrdinalIgnoreCase);
             }
 
-            @if (loginPortal == "Manager" && !isAdmin)
+            @if (isManager && !isAdmin)
             {
                 <li><a asp-controller="Manager" asp-action="Dashboard" class="emp-nav-link @(ViewData["ActivePage"]?.ToString() == "ManagerHome" ? "active" : "")">Team Overview</a></li>
                 <li class="dropdown">
@@ -219,7 +225,7 @@
                         <li><a class="dropdown-item" asp-controller="Employee" asp-action="Index">Manage Employees</a></li>
                         <li><a class="dropdown-item" asp-controller="Department" asp-action="Index">Manage Departments</a></li>
                         <li><a class="dropdown-item" asp-controller="Leave" asp-action="Index">Leave Requests</a></li>
-                        <li><a class="dropdown-item" asp-controller="LeaveBalance" asp-action="Index">Leave Balances</a></li>
+                        <li><a class="dropdown-item" asp-controller="LeaveBalance" asp-action="Index">Custom Leave Allocation</a></li>
                         <li><a class="dropdown-item" asp-controller="LeaveType" asp-action="Index">Manage Leave Types</a></li>
                         <li><a class="dropdown-item" asp-controller="Designation" asp-action="Index">Manage Designations</a></li>
                         <li><a class="dropdown-item" asp-controller="Admin" asp-action="ProfileRequests">Profile Approvals</a></li>

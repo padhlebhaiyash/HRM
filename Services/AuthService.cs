@@ -18,11 +18,17 @@ namespace HRMSystem.Services
 
         public async Task<User?> ValidateUserAsync(string username, string password)
         {
+            var clean = (username ?? "").Trim().ToLower();
+            if (string.IsNullOrEmpty(clean)) return null;
+
             var user = await _context.Users
                                      .Include(u => u.Employee)
+                                        .ThenInclude(e => e!.Designation)
                                      .Include(u => u.UserRoles)
                                         .ThenInclude(ur => ur.Role)
-                                     .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+                                     .FirstOrDefaultAsync(u => u.IsActive && 
+                                         (u.Username.ToLower() == clean || 
+                                          (u.Employee != null && u.Employee.Email.ToLower() == clean)));
 
             if (user == null) return null;
 
@@ -64,7 +70,38 @@ namespace HRMSystem.Services
             }
             else
             {
-                roleMappings.Add(new UserRoleMapping { RoleId = 4 }); // Fallback to bare Employee
+                // Dynamically resolve base Employee role by name (avoid hardcoded ID)
+                var employeeRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Employee");
+                if (employeeRole != null)
+                {
+                    roleMappings.Add(new UserRoleMapping { RoleId = employeeRole.Id });
+                }
+
+                // Auto-assign Manager or Admin role if the employee designation matches
+                var employee = await _context.Employees
+                    .Include(e => e.Designation)
+                    .FirstOrDefaultAsync(e => e.Id == employeeId);
+
+                if (employee?.Designation != null)
+                {
+                    string desigName = employee.Designation.Name?.Trim() ?? "";
+                    if (desigName.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var managerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Manager");
+                        if (managerRole != null && !roleMappings.Any(rm => rm.RoleId == managerRole.Id))
+                        {
+                            roleMappings.Add(new UserRoleMapping { RoleId = managerRole.Id });
+                        }
+                    }
+                    else if (desigName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+                        if (adminRole != null && !roleMappings.Any(rm => rm.RoleId == adminRole.Id))
+                        {
+                            roleMappings.Add(new UserRoleMapping { RoleId = adminRole.Id });
+                        }
+                    }
+                }
             }
 
             var user = new User

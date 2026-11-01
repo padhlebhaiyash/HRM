@@ -120,10 +120,10 @@
                         <span asp-validation-for="DesignationId" class="text-danger small"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Salary" class="form-label fw-bold small">Salary</label>
+                        <label asp-for="Salary" class="form-label fw-bold small">Salary <span class="text-muted fw-normal">(Optional)</span></label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
-                            <input asp-for="Salary" class="form-control" type="number" step="100" />
+                            <input asp-for="Salary" class="form-control" type="number" step="100" placeholder="0.00" />
                         </div>
                         <span asp-validation-for="Salary" class="text-danger small"></span>
                     </div>

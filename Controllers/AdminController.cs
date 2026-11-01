@@ -111,7 +111,7 @@ namespace HRMSystem.Controllers
                     CompanyName = null,
                     AppBaseUrl = "https://munrohr.inovexa.solutions",
                     FromEmail = "techinovexasolutions@gmail.com",
-                    FromName = "HRM System"
+                    FromName = "MunroHR"
                 };
                 _context.CompanySettings.Add(companySetting);
                 await _context.SaveChangesAsync();

@@ -1,6 +1,7 @@
 using HRMSystem.Data;
 using HRMSystem.Filters;
 using HRMSystem.Models;
+using HRMSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,12 @@ namespace HRMSystem.Controllers
     public class LeaveController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly EmailService _emailService;
 
-        public LeaveController(ApplicationDbContext context)
+        public LeaveController(ApplicationDbContext context, EmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<IActionResult> Index()
@@ -94,7 +97,18 @@ namespace HRMSystem.Controllers
 
                     _context.Add(leave);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Leave request submitted successfully.";
+
+                    // Notify Reporting Managers and Admin via Email
+                    try
+                    {
+                        await _emailService.NotifyLeaveApplicationAsync(leave.Id, Request.Scheme, Request.Host.Value);
+                    }
+                    catch
+                    {
+                        // Email delivery failure should not block successful leave application
+                    }
+
+                    TempData["SuccessMessage"] = "Leave request submitted successfully. A notification has been sent to your reporting manager and HR/Admin.";
                     return RedirectToAction(nameof(Index));
                 }
             }

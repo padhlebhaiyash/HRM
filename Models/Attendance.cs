@@ -62,5 +62,41 @@ namespace HRMSystem.Models
                 return $"{(int)ts.TotalHours}h {ts.Minutes}m";
             }
         }
+
+        [NotMapped]
+        public double OvertimeMinutes
+        {
+            get
+            {
+                if (!WorkDurationMinutes.HasValue || WorkDurationMinutes.Value <= 0) return 0;
+                return WorkDurationMinutes.Value - 540; // 9 hours * 60 min = 540 min
+            }
+        }
+
+        [NotMapped]
+        public string DisplayOvertime
+        {
+            get
+            {
+                if (!WorkDurationMinutes.HasValue || WorkDurationMinutes.Value <= 0) return "--";
+                var diff = WorkDurationMinutes.Value - 540;
+                var absTs = TimeSpan.FromMinutes(Math.Abs(diff));
+                var hours = (int)absTs.TotalHours;
+                var mins = absTs.Minutes;
+
+                if (diff > 0)
+                {
+                    return $"+{hours}h {mins}m";
+                }
+                else if (diff == 0)
+                {
+                    return "0h 0m";
+                }
+                else
+                {
+                    return $"-{hours}h {mins}m";
+                }
+            }
+        }
     }
 }

@@ -12,20 +12,60 @@
     int days = (int)((timeAtWork.TotalDays % 365.25) % 30);
 }
 
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet" />
+    <style>
+        .fc-toolbar-title {
+            font-size: 1.15rem !important;
+            font-weight: 600;
+            color: #5d7b9d;
+        }
+        .fc-button-primary {
+            background-color: #90A4AE !important;
+            border-color: #90A4AE !important;
+            text-transform: uppercase;
+            font-size: 0.75rem !important;
+            font-weight: 600 !important;
+        }
+        .fc-event {
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 0.8rem;
+            border-radius: 3px;
+        }
+        .calendar-legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: white;
+            border: 1px solid #dee2e6;
+            font-size: 0.8rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+    </style>
+}
+
 <div class="row">
     <!-- Left Sidebar: Profile -->
     <div class="col-lg-3 col-md-4 mb-4">
         <!-- Profile Box -->
-        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 15px;">
-            <img src="https://ui-avatars.com/api/?name=@Uri.EscapeDataString(Model.FullName)&size=250&background=random" 
+        <div class="bg-white text-center pb-3 shadow-sm border" style="padding: 20px 15px;">
+            <img src="@(string.IsNullOrEmpty(Model.PhotoPath) ? $"https://ui-avatars.com/api/?name={Uri.EscapeDataString(Model.FullName)}&size=250&background=random" : Model.PhotoPath)" 
                  alt="Profile Photo" class="profile-img mb-3" />
-            <h3 class="profile-name">@Model.FullName</h3>
-            <div class="profile-role">
+            <h3 class="profile-name mt-2 mb-1">@Model.FullName</h3>
+            <div class="profile-role mb-0">
                 @Model.Designation?.Name<br>
                 @Model.Department?.Name
-            </div>
-            <div class="status-box">
-                At work for : @years y @months m @days d
             </div>
         </div>
 
@@ -212,6 +252,36 @@
             </div>
         </div>
 
+        <!-- Team Leave Calendar -->
+        <div class="main-content-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-calendar-event me-2"></i> Team Leave Calendar</span>
+            <a asp-action="TeamCalendar" class="btn btn-sm btn-outline-light rounded-pill px-3 py-0 fw-bold" style="font-size: 0.75rem;">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Full View
+            </a>
+        </div>
+        <div class="main-content-body shadow-sm mb-4 bg-white p-3 border" style="border-radius: 8px;">
+            <div id="teamLeaveCalendar"></div>
+
+            <div class="calendar-legend d-flex flex-wrap gap-3 mt-3 p-2 bg-light border rounded small">
+                <div class="legend-item d-flex align-items-center gap-2">
+                    <div class="legend-color" style="background-color: #e50000; width: 14px; height: 14px; border-radius: 3px;"></div>
+                    <span>On Leave (CL/SL/EL)</span>
+                </div>
+                <div class="legend-item d-flex align-items-center gap-2">
+                    <div class="legend-color" style="background-color: #2db84d; width: 14px; height: 14px; border-radius: 3px;"></div>
+                    <span>Work From Home</span>
+                </div>
+                <div class="legend-item d-flex align-items-center gap-2">
+                    <div class="legend-color" style="background-color: #c19b70; width: 14px; height: 14px; border-radius: 3px;"></div>
+                    <span>Half Day</span>
+                </div>
+                <div class="legend-item d-flex align-items-center gap-2">
+                    <div class="legend-color" style="background-color: #4a5a6a; width: 14px; height: 14px; border-radius: 3px;"></div>
+                    <span>Office Off (Weekend)</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Recent Leave Requests Table -->
         <div class="main-content-header">
             <i class="bi bi-calendar3"></i> My Recent Leave Requests
@@ -335,12 +405,38 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <script>
+        // Initialize Team Leave Calendar
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('teamLeaveCalendar');
+            if (calendarEl) {
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,dayGridWeek'
+                    },
+                    height: 'auto',
+                    events: '/EmployeeSelf/GetTeamAttendanceData',
+                    eventClick: function(info) {
+                        if (info.event.display !== 'background') {
+                            alert('Employee: ' + info.event.title + '\nDate: ' + info.event.start.toLocaleDateString());
+                        }
+                    }
+                });
+                calendar.render();
+            }
+        });
+
         // Live Clock
         function updateClock() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
             $('#liveDigitalClock').text(timeStr);
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+            $('#liveDateStr').text(dateStr);
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -354,7 +450,7 @@
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                       Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
@@ -363,6 +459,10 @@
         function checkUserLocationStatus() {
             $('#gpsStatusIcon').removeClass().addClass('spinner-border spinner-border-sm me-2 text-info');
             $('#gpsStatusText').text('Detecting your GPS location...');
+
+            const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+            const userOffset = new Date().getTimezoneOffset();
+            const statusUrl = '/Attendance/GetTodayStatus?timeZone=' + encodeURIComponent(userTz) + '&utcOffsetMinutes=' + userOffset;
 
             if (!navigator.geolocation) {
                 $('#gpsStatusBanner').removeClass('alert-info alert-success').addClass('alert-danger');
@@ -376,33 +476,58 @@
                     currentLatitude = pos.coords.latitude;
                     currentLongitude = pos.coords.longitude;
                     
-                    // Fetch office locations from server to test perimeter
-                    $.get('/Attendance/GetTodayStatus', function(data) {
-                        if (data && data.officeLocations && data.officeLocations.length > 0) {
-                            let nearestDist = Infinity;
-                            let inside = false;
-                            let nearestLoc = null;
-
-                            data.officeLocations.forEach(loc => {
-                                const dist = calculateHaversineMeters(currentLatitude, currentLongitude, loc.latitude, loc.longitude);
-                                if (dist < nearestDist) {
-                                    nearestDist = dist;
-                                    nearestLoc = loc;
-                                }
-                                if (dist <= loc.allowedRadiusMeters || !loc.isEnforced) {
-                                    inside = true;
-                                }
-                            });
-
-                            const distRounded = Math.round(nearestDist);
-                            if (inside) {
-                                $('#gpsStatusBanner').removeClass('alert-info alert-danger alert-warning').addClass('alert-success');
-                                $('#gpsStatusIcon').removeClass().addClass('bi bi-check-circle-fill me-2 text-success');
-                                $('#gpsStatusText').html(`<strong>GPS Active:</strong> Inside Office Location Zone (${nearestLoc.name} - ~${distRounded}m away). Clock In/Out Permitted.`);
+                    // Fetch office locations and today's status tailored to employee local timezone
+                    $.get(statusUrl, function(data) {
+                        if (data) {
+                            if (data.isClockedIn && !data.isClockedOut) {
+                                $('#summaryClockInTime').text(data.clockInTime || '--:--');
+                                $('#summaryClockOutTime').text('--:--');
+                                $('#summaryWorkDuration').text('--');
+                                $('#summaryStatusBadge').html('<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Clocked In (Active)</span>');
+                                $('#btnClockIn').addClass('disabled opacity-50');
+                                $('#btnClockOut').removeClass('disabled opacity-50').prop('disabled', false);
+                            } else if (data.isClockedOut) {
+                                $('#summaryClockInTime').text(data.clockInTime || '--:--');
+                                $('#summaryClockOutTime').text(data.clockOutTime || '--:--');
+                                $('#summaryWorkDuration').text(data.workDuration || '--');
+                                $('#summaryStatusBadge').html('<span class="badge bg-primary"><i class="bi bi-flag-fill me-1"></i>Shift Completed</span>');
+                                $('#btnClockIn').addClass('disabled opacity-50');
+                                $('#btnClockOut').addClass('disabled opacity-50');
                             } else {
-                                $('#gpsStatusBanner').removeClass('alert-info alert-success alert-warning').addClass('alert-danger');
-                                $('#gpsStatusIcon').removeClass().addClass('bi bi-x-circle-fill me-2 text-danger');
-                                $('#gpsStatusText').html(`<strong>Outside Perimeter:</strong> You are ~${distRounded}m away from ${nearestLoc.name} (Allowed: ${nearestLoc.allowedRadiusMeters}m). Clock In/Out Restricted.`);
+                                $('#summaryClockInTime').text('--:--');
+                                $('#summaryClockOutTime').text('--:--');
+                                $('#summaryWorkDuration').text('--');
+                                $('#summaryStatusBadge').html('<span class="badge bg-secondary"><i class="bi bi-clock me-1"></i>Not Clocked In</span>');
+                                $('#btnClockIn').removeClass('disabled opacity-50').prop('disabled', false);
+                                $('#btnClockOut').addClass('disabled opacity-50');
+                            }
+
+                            if (data.officeLocations && data.officeLocations.length > 0) {
+                                let nearestDist = Infinity;
+                                let inside = false;
+                                let nearestLoc = null;
+
+                                data.officeLocations.forEach(loc => {
+                                    const dist = calculateHaversineMeters(currentLatitude, currentLongitude, loc.latitude, loc.longitude);
+                                    if (dist < nearestDist) {
+                                        nearestDist = dist;
+                                        nearestLoc = loc;
+                                    }
+                                    if (dist <= loc.allowedRadiusMeters || !loc.isEnforced) {
+                                        inside = true;
+                                    }
+                                });
+
+                                const distRounded = Math.round(nearestDist);
+                                if (inside) {
+                                    $('#gpsStatusBanner').removeClass('alert-info alert-danger alert-warning').addClass('alert-success');
+                                    $('#gpsStatusIcon').removeClass().addClass('bi bi-check-circle-fill me-2 text-success');
+                                    $('#gpsStatusText').html(`<strong>GPS Active:</strong> Inside Office Location Zone (${nearestLoc.name} - ~${distRounded}m away). Clock In/Out Permitted.`);
+                                } else {
+                                    $('#gpsStatusBanner').removeClass('alert-info alert-success alert-warning').addClass('alert-danger');
+                                    $('#gpsStatusIcon').removeClass().addClass('bi bi-x-circle-fill me-2 text-danger');
+                                    $('#gpsStatusText').html(`<strong>Outside Perimeter:</strong> You are ~${distRounded}m away from ${nearestLoc.name} (Allowed: ${nearestLoc.allowedRadiusMeters}m). Clock In/Out Restricted.`);
+                                }
                             }
                         }
                     });
@@ -595,6 +720,8 @@
 
         function sendAttendanceRequest(lat, lng, photoBase64) {
             const url = attendanceActionType === 'clockin' ? '/Attendance/ClockIn' : '/Attendance/ClockOut';
+            const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+            const userOffset = new Date().getTimezoneOffset();
 
             $.ajax({
                 url: url,
@@ -603,7 +730,9 @@
                 data: JSON.stringify({
                     latitude: lat,
                     longitude: lng,
-                    photoBase64: photoBase64
+                    photoBase64: photoBase64,
+                    timeZone: userTz,
+                    utcOffsetMinutes: userOffset
                 }),
                 success: function(res) {
                     closeAttendanceCamera();

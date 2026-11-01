@@ -30,12 +30,12 @@ namespace HRMSystem.Controllers
                 var sessionRoles = HttpContext.Session.GetString("UserRoles") ?? "";
                 var portal = HttpContext.Session.GetString("LoginPortal") ?? "Employee";
 
-                if (sessionRoles.Contains("Admin"))
-                    return RedirectToAction("Dashboard", "Admin");
-                else if (portal == "Manager")
-                    return RedirectToAction("Dashboard", "Manager");
-                else
+                if (portal == "Employee")
                     return RedirectToAction("Dashboard", "EmployeeSelf");
+                else if (sessionRoles.Contains("Admin"))
+                    return RedirectToAction("Dashboard", "Admin");
+                else
+                    return RedirectToAction("Dashboard", "Manager");
             }
             
             return View();
@@ -53,24 +53,80 @@ namespace HRMSystem.Controllers
             }
 
             // Enforce role checks logically over the injected DB string tokens
-            var roleNames = user.UserRoles?.Select(ur => ur.Role?.Name).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new List<string>();
+            var roleNames = user.UserRoles?.Select(ur => ur.Role?.Name).Where(n => !string.IsNullOrEmpty(n)).Select(n => n!).ToList() ?? new List<string>();
+
+            // Dynamically detect Manager status by Designation or Reporting Subordinates (avoiding reliance on hardcoded IDs)
+            bool isManager = roleNames.Contains("Manager", StringComparer.OrdinalIgnoreCase);
+            if (!isManager && user.EmployeeId.HasValue)
+            {
+                var emp = user.Employee;
+                var desigName = emp?.Designation?.Name?.Trim();
+                if (!string.IsNullOrEmpty(desigName) && desigName.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+                {
+                    isManager = true;
+                }
+                else
+                {
+                    // Or if other active employees report to this employee as their Manager
+                    isManager = await _context.Employees.AnyAsync(e => e.ManagerId == user.EmployeeId.Value && e.IsActive);
+                }
+
+                if (isManager)
+                {
+                    roleNames.Add("Manager");
+
+                    // Dynamically map role in database by Name so subsequent AuthorizeRole filters pass seamlessly
+                    var managerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Manager");
+                    if (managerRole != null && !_context.UserRoles.Any(ur => ur.UserId == user.Id && ur.RoleId == managerRole.Id))
+                    {
+                        _context.UserRoles.Add(new UserRoleMapping { UserId = user.Id, RoleId = managerRole.Id });
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
+            // Also dynamically detect Admin status by Designation if not already assigned
+            bool isAdmin = roleNames.Contains("Admin", StringComparer.OrdinalIgnoreCase);
+            if (!isAdmin && user.EmployeeId.HasValue)
+            {
+                var emp = user.Employee;
+                var desigName = emp?.Designation?.Name?.Trim();
+                if (!string.IsNullOrEmpty(desigName) && desigName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    roleNames.Add("Admin");
+                    var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+                    if (adminRole != null && !_context.UserRoles.Any(ur => ur.UserId == user.Id && ur.RoleId == adminRole.Id))
+                    {
+                        _context.UserRoles.Add(new UserRoleMapping { UserId = user.Id, RoleId = adminRole.Id });
+                        await _context.SaveChangesAsync();
+                    }
+                }
+            }
+
             var rolesString = string.Join(",", roleNames);
 
-            if (roleMode == "Employee" && roleNames.Contains("Admin"))
+            bool isManagerOrAdmin = roleNames.Contains("Admin", StringComparer.OrdinalIgnoreCase) || 
+                                    roleNames.Contains("Manager", StringComparer.OrdinalIgnoreCase) || 
+                                    roleNames.Contains("HR", StringComparer.OrdinalIgnoreCase);
+
+            if (roleMode == "Employee" && roleNames.Contains("Admin", StringComparer.OrdinalIgnoreCase))
             {
                 ModelState.AddModelError(string.Empty, "Access denied. Admins must log in through the Manager tab.");
                 return View();
             }
-            if (roleMode == "Manager" && !roleNames.Contains("Admin") && !roleNames.Contains("Manager") && !roleNames.Contains("HR"))
+            if (roleMode == "Manager" && !isManagerOrAdmin)
             {
                 ModelState.AddModelError(string.Empty, "Access denied. Only Management or HR can log in through the Manager tab.");
                 return View();
             }
 
+            // Determine active login portal:
+            string activePortal = roleMode;
+
             // Set session variables
             HttpContext.Session.SetString("UserId", user.Id.ToString());
             HttpContext.Session.SetString("UserRoles", rolesString);
-            HttpContext.Session.SetString("LoginPortal", roleMode); // "Employee" or "Manager"
+            HttpContext.Session.SetString("LoginPortal", activePortal); // "Employee" or "Manager"
             HttpContext.Session.SetString("Username", user.Username);
             
             if (user.EmployeeId.HasValue)
@@ -88,13 +144,14 @@ namespace HRMSystem.Controllers
                 return RedirectToAction("ResetPassword");
             }
 
-            // Route based on portal selected at login
-            if (roleNames.Contains("Admin"))
-                return RedirectToAction("Dashboard", "Admin");
-            else if (roleMode == "Manager")
-                return RedirectToAction("Dashboard", "Manager");
-            else
+            // Route based on portal selected at login:
+            // Whenever an employee logs in, they always land on the Employee Dashboard page
+            if (roleMode == "Employee")
                 return RedirectToAction("Dashboard", "EmployeeSelf");
+            else if (roleNames.Contains("Admin", StringComparer.OrdinalIgnoreCase))
+                return RedirectToAction("Dashboard", "Admin");
+            else
+                return RedirectToAction("Dashboard", "Manager");
         }
 
         [HttpGet]

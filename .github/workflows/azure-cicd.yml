@@ -11,7 +11,6 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME || 'hrmsystem-prod' }}
   DOTNET_VERSION: '9.0.x'
 
 jobs:
@@ -51,7 +50,7 @@ jobs:
   # 2. Continuous Deployment (CD): Deploy to Azure App Service
   # =========================================================================
   deploy:
-    name: Deploy to Azure App Service
+    name: Deploy to Azure Web App
     needs: build
     # Only deploy when pushing to main or triggering manually
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -64,9 +63,35 @@ jobs:
           name: webapp-artifact
           path: ./publish
 
+      - name: Resolve Web App Name from Publish Profile
+        id: resolve_app
+        shell: bash
+        env:
+          PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          CUSTOM_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: |
+          if [ -z "$PUBLISH_PROFILE" ]; then
+            echo "::error::Secret AZURE_WEBAPP_PUBLISH_PROFILE is empty or not set! Please add it in GitHub Settings > Secrets and variables > Actions > Secrets."
+            exit 1
+          fi
+
+          # Extract app name from publish profile XML (msdeploySite or publishUrl)
+          DETECTED_NAME=$(echo "$PUBLISH_PROFILE" | grep -o 'msdeploySite="[^"]*"' | head -1 | sed 's/msdeploySite="//;s/"//')
+          if [ -z "$DETECTED_NAME" ]; then
+            DETECTED_NAME=$(echo "$PUBLISH_PROFILE" | grep -o 'publishUrl="[^"]*"' | head -1 | sed 's/publishUrl="//;s/"//' | cut -d'.' -f1)
+          fi
+
+          FINAL_APP_NAME="${CUSTOM_NAME:-$DETECTED_NAME}"
+          if [ -z "$FINAL_APP_NAME" ]; then
+            FINAL_APP_NAME="hrmsystem-prod"
+          fi
+
+          echo "Detected Azure Web App Name: $FINAL_APP_NAME"
+          echo "app_name=$FINAL_APP_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: ${{ steps.resolve_app.outputs.app_name }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: ./publish

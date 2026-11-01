@@ -1,0 +1,72 @@
+name: Build and Deploy to Azure Web App (CI/CD)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME || 'hrmsystem-prod' }}
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  # =========================================================================
+  # 1. Continuous Integration (CI): Restore, Build, and Package
+  # =========================================================================
+  build:
+    name: Build & Package (.NET 9)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore Dependencies
+        run: dotnet restore HRMSystem.csproj
+
+      - name: Build Application
+        run: dotnet build HRMSystem.csproj --configuration Release --no-restore
+
+      - name: Publish Artifacts
+        run: dotnet publish HRMSystem.csproj --configuration Release --no-build --output ./publish
+
+      - name: Upload Build Artifact for Deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-artifact
+          path: ./publish
+          retention-days: 7
+
+  # =========================================================================
+  # 2. Continuous Deployment (CD): Deploy to Azure App Service
+  # =========================================================================
+  deploy:
+    name: Deploy to Azure App Service
+    needs: build
+    # Only deploy when pushing to main or triggering manually
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webapp-artifact
+          path: ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
